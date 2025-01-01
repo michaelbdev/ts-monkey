@@ -59,7 +59,7 @@ export async function repl() {
 		}
 
 		if (values.ast) {
-			console.log(program.statements[0]);
+			console.dir(program.statements[0], { depth: null });
 		}
 		prompt();
 	}
