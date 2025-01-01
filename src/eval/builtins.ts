@@ -20,6 +20,7 @@ export const builtins: Record<string, BuiltInObject> = {
 	last: getBuiltinByName("last")!,
 	rest: getBuiltinByName("rest")!,
 	push: getBuiltinByName("push")!,
+	set: getBuiltinByName("set")!,
 	map: new BuiltInObject(({ args }) => {
 		if (args.length !== 2) {
 			return new ErrorObject(

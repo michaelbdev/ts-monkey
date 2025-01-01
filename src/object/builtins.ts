@@ -4,13 +4,16 @@ import type { Maybe } from "../utils/types";
 import { VM } from "../vm/vm";
 import {
 	ArrayObject,
+	BooleanObject,
 	BuiltInObject,
 	type ClosureObject,
 	ErrorObject,
+	HashObject,
 	IntegerObject,
 	type InternalObject,
 	NULL_OBJ,
 	ObjectType,
+	StringObject,
 	TRUE_OBJ,
 } from "./object";
 
@@ -277,6 +280,30 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 				}
 			}
 			return new ArrayObject(filtered);
+		}),
+	},
+	{
+		name: "set",
+		builtin: new BuiltInObject(({ args }) => {
+			const hashmap = args[0] as HashObject;
+			const key = args[1] as Maybe<InternalObject>;
+			const value = args[2] as Maybe<InternalObject>;
+			if (!(hashmap instanceof HashObject)) {
+				return new ErrorObject(
+					`set's first argument must be a hashmap, got ${args[0]?.type()}`,
+				);
+			}
+			if (
+				!(
+					key instanceof IntegerObject ||
+					key instanceof BooleanObject ||
+					key instanceof StringObject
+				)
+			) {
+				return new ErrorObject("not a valid hash key");
+			}
+			hashmap.pairs.set(key.value, { key, value });
+			return NULL_OBJ;
 		}),
 	},
 ];

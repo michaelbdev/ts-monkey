@@ -532,6 +532,30 @@ describe("vm", () => {
 					"let global = 5;map([1,2,3,4],fn (x){let multiplier =2; (x+global)*multiplier})",
 				expected: [12, 14, 16, 18],
 			},
+			{
+				input: `let map ={"a":1}; set(map,"b",2); map["b"]`,
+				expected: 2,
+			},
+			{
+				input: `let map ={"a":1}; set(map,"b",2); map["b"]`,
+				expected: 2,
+			},
+			{
+				input: ` set([],"b",2)`,
+				expected: new ErrorObject(
+					"set's first argument must be a hashmap, got ARRAY",
+				),
+			},
+			{
+				input: "set(1,1,1)",
+				expected: new ErrorObject(
+					"set's first argument must be a hashmap, got INTEGER",
+				),
+			},
+			{
+				input: "set({},[],1)",
+				expected: new ErrorObject("not a valid hash key"),
+			},
 		]);
 	});
 	it("should execute closures", () => {
