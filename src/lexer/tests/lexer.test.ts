@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { TokenType } from "../../token/token";
+import { type Token, TokenType } from "../../token/token";
 import { Lexer } from "../lexer";
 
 describe("lexer", () => {
@@ -21,6 +21,101 @@ describe("lexer", () => {
 			const token = lexer.nextToken();
 			expect(token.type).toBe(test.expectedType);
 			expect(token.literal).toBe(test.expectedLiteral);
+		}
+	});
+	it("lexes operators and delimiters with correct spans", () => {
+		const input = "=+(){},;";
+		const tests: { expectedType: TokenType; expectedLiteral: string }[] = [
+			{ expectedType: TokenType.ASSIGN, expectedLiteral: "=" },
+			{ expectedType: TokenType.PLUS, expectedLiteral: "+" },
+			{ expectedType: TokenType.LPAREN, expectedLiteral: "(" },
+			{ expectedType: TokenType.RPAREN, expectedLiteral: ")" },
+			{ expectedType: TokenType.LBRACE, expectedLiteral: "{" },
+			{ expectedType: TokenType.RBRACE, expectedLiteral: "}" },
+			{ expectedType: TokenType.COMMA, expectedLiteral: "," },
+			{ expectedType: TokenType.SEMICOLON, expectedLiteral: ";" },
+			{ expectedType: TokenType.EOF, expectedLiteral: "" },
+		];
+
+		const lexer = new Lexer(input);
+		for (const test of tests) {
+			const token = lexer.nextToken();
+			expect(token.type).toBe(test.expectedType);
+			expect(token.literal).toBe(test.expectedLiteral);
+
+			// 🔍 span check
+			const slice = input.slice(token.span.start, token.span.end);
+			if (token.type !== TokenType.STRING) {
+				expect(slice).toBe(token.literal);
+			}
+		}
+	});
+	it("lexes identifiers, numbers, and strings with correct spans", () => {
+		const input = `
+		let five = 5;
+		let ten = 10;
+
+		let add = fn(x,y){
+			x+y;
+		};
+		let result = add(five,ten);
+		!-*/5;
+		5 < 10 > 5;
+
+		if (5 < 10) {
+			return true;
+			} else {
+			return false;
+			}
+
+			10==10;
+			10!=9;
+			"foobar"
+			"foo bar"
+			false || true
+			true && false
+			5>=5
+			1<=1
+			[1,2]
+			{"foo":"bar"}
+			for(item,index in arr){
+			
+			}
+			fn (x) => x * 2
+
+			/*
+			first multiline comment
+			*/
+
+			/*
+			consecutive multiline comments  
+			*/
+
+			// single line comment
+			// another single comment
+
+			/*
+			using multiline comment character * using multiline comment character /
+			*/
+
+			1
+			%
+			
+		`;
+		const lexer = new Lexer(input);
+		const tokens: Token[] = [];
+
+		let tok: Token;
+		do {
+			tok = lexer.nextToken();
+			tokens.push(tok);
+		} while (tok.type !== TokenType.EOF);
+
+		for (const tok of tokens) {
+			if (tok.literal.length === 0) continue; // skip EOF
+
+			const slice = input.slice(tok.span.start, tok.span.end);
+			expect(slice).toBe(tok.literal);
 		}
 	});
 	it("lexes some identifiers and integers while ignoring comments", () => {

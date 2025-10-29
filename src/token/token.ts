@@ -66,7 +66,12 @@ export function lookupIdentifier(identifer: string) {
 	return TokenType.IDENT;
 }
 
+type Span = {
+	start: number;
+	end: number;
+};
 export type Token = {
 	type: TokenType;
 	literal: string;
+	span: Span;
 };
