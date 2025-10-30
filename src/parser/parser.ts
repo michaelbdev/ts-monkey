@@ -138,32 +138,49 @@ export class Parser {
 		if (this.peekTokenIs(TokenType.SEMICOLON)) {
 			this.nextToken();
 		}
+		statement.span = {
+			start: statement.token.span.start,
+			// TODO: fix nullability
+			end: statement.value!.span!.end,
+		};
 		return statement;
 	}
 	private parseReturnStatement() {
+		const token = this.currToken;
 		const statement = new ReturnStatement(this.currToken);
 		this.nextToken();
 		statement.value = this.parseExpression(Precedences.LOWEST);
+		statement.span = {
+			start: token.span.start,
+			end: statement.value!.span!.end,
+		};
 		if (this.peekTokenIs(TokenType.SEMICOLON)) {
 			this.nextToken();
 		}
 		return statement;
 	}
 	private parseExpressionStatement() {
+		const token = this.currToken;
 		const statement = new ExpressionStatement(this.currToken);
 		statement.expression = this.parseExpression(Precedences.LOWEST);
+		statement.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
 		if (this.peekTokenIs(TokenType.SEMICOLON)) {
 			this.nextToken();
 		}
 		return statement;
 	}
 	private parseForStatement() {
+		const token = this.currToken;
 		const statement = new ForStatement(this.currToken);
 		if (!this.expectPeek(TokenType.LPAREN)) {
 			return null;
 		}
 		this.nextToken();
 		statement.currItem = new Identifier(this.currToken, this.currToken.literal);
+		statement.currItem.span = this.currToken.span;
 		if (this.peekTokenIs(TokenType.COMMA)) {
 			this.nextToken();
 			this.nextToken();
@@ -171,6 +188,7 @@ export class Parser {
 				this.currToken,
 				this.currToken.literal,
 			);
+			statement.currIndex.span = this.currToken.span;
 		}
 
 		if (!this.expectPeek(TokenType.IN)) {
@@ -187,6 +205,10 @@ export class Parser {
 		}
 
 		statement.body = this.parseBlockStatement();
+		statement.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
 		if (this.peekTokenIs(TokenType.SEMICOLON)) {
 			this.nextToken();
 		}
@@ -216,22 +238,33 @@ export class Parser {
 		return leftHandExpr;
 	}
 	private parseIntegerLiteral = () => {
-		const statement = new IntegerLiteral(this.currToken);
+		const expr = new IntegerLiteral(this.currToken);
+		expr.span = this.currToken.span;
 		const value = Number.parseInt(this.currToken.literal);
 		if (Number.isNaN(value)) {
 			this.errors.push(`could not parse ${this.currToken.literal} as integer`);
 			return null;
 		}
-		statement.value = value;
-		return statement;
+		expr.value = value;
+		return expr;
 	};
 	private parseBoolean = () => {
-		return new BooleanLiteral(this.currToken, this.currTokenIs(TokenType.TRUE));
+		const expr = new BooleanLiteral(
+			this.currToken,
+			this.currTokenIs(TokenType.TRUE),
+		);
+		expr.span = this.currToken.span;
+		return expr;
 	};
 	private parsePrefixExpression = () => {
+		const prefixToken = this.currToken;
 		const expr = new PrefixExpression(this.currToken, this.currToken.literal);
 		this.nextToken();
 		expr.rightExpression = this.parseExpression(Precedences.PREFIX);
+		expr.span = {
+			start: prefixToken.span.start,
+			end: expr!.rightExpression!.span!.end,
+		};
 		return expr;
 	};
 
@@ -244,17 +277,27 @@ export class Parser {
 		const currPrecedence = this.currPrecedence();
 		this.nextToken();
 		expression.rightExpr = this.parseExpression(currPrecedence);
+		expression.span = {
+			start: expression.leftExpr.span!.start,
+			end: expression.rightExpr!.span!.end,
+		};
 		return expression;
 	};
 	private parseGroupedExpression = () => {
+		const token = this.currToken;
 		this.nextToken();
 		const expression = this.parseExpression(Precedences.LOWEST);
 		if (!this.expectPeek(TokenType.RPAREN)) {
 			return null;
 		}
+		expression!.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
 		return expression;
 	};
 	private parseIfExpression = () => {
+		const token = this.currToken;
 		const expression = new IfExpression(this.currToken);
 		if (!this.expectPeek(TokenType.LPAREN)) {
 			return null;
@@ -269,10 +312,17 @@ export class Parser {
 			if (!this.expectPeek(TokenType.LBRACE)) return null;
 			expression.alternative = this.parseBlockStatement();
 		}
+		expression.span = {
+			start: token.span.start,
+			end: expression.alternative
+				? expression.alternative.span!.end
+				: expression.consequence!.span!.end,
+		};
 		return expression;
 	};
 
 	private parseFunctionLiteral = () => {
+		const token = this.currToken;
 		const expression = new FunctionLiteral(this.currToken);
 		// if parens are left off the function we try to parse it as a concise arrow fn
 		if (this.peekTokenIs(TokenType.IDENT)) {
@@ -289,6 +339,10 @@ export class Parser {
 		if (!this.expectPeek(TokenType.LBRACE)) return null;
 
 		expression.body = this.parseBlockStatement();
+		expression.span = {
+			start: token.span.start,
+			end: expression.body.span!.end,
+		};
 
 		return expression;
 	};
@@ -299,6 +353,10 @@ export class Parser {
 		} else {
 			expr.body = this.parseExpression(Precedences.LOWEST);
 		}
+		expr.span = {
+			start: expr.token.span.start,
+			end: expr.body!.span!.end,
+		};
 		return expr;
 	};
 	private tryParseConciseArrowFn(expr: FunctionLiteral) {
@@ -324,21 +382,27 @@ export class Parser {
 		}
 		this.nextToken();
 		const param = new Identifier(this.currToken, this.currToken.literal);
+		param.span = this.currToken.span;
 		parameters.push(param);
 		while (this.peekTokenIs(TokenType.COMMA)) {
 			this.nextToken();
 			this.nextToken();
-			parameters.push(new Identifier(this.currToken, this.currToken.literal));
+			const ident = new Identifier(this.currToken, this.currToken.literal);
+			ident.span = this.currToken.span;
+			parameters.push(ident);
 		}
 		if (!this.expectPeek(TokenType.RPAREN)) return null;
 		return parameters;
 	}
 	private parseCallExpression = (func: Expression) => {
-		return new CallExpression(
-			this.currToken,
-			func,
-			this.parseExpressionList(TokenType.RPAREN),
-		);
+		const token = this.currToken;
+		const args = this.parseExpressionList(TokenType.RPAREN);
+		const callExpr = new CallExpression(token, func, args);
+		callExpr.span = {
+			start: func.span!.start,
+			end: this.currToken.span.end,
+		};
+		return callExpr;
 	};
 	private parseExpressionList = (end: TokenType) => {
 		const arr: Expression[] = [];
@@ -357,6 +421,7 @@ export class Parser {
 		return arr;
 	};
 	private parseBlockStatement() {
+		const token = this.currToken;
 		const block = new BlockStatement(this.currToken);
 		this.nextToken();
 		while (
@@ -369,20 +434,31 @@ export class Parser {
 			}
 			this.nextToken();
 		}
+		block.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
 
 		return block;
 	}
 	private parseStringLiteral = () => {
-		return new StringLiteral(this.currToken, this.currToken.literal);
+		const expr = new StringLiteral(this.currToken, this.currToken.literal);
+		expr.span = this.currToken.span;
+		return expr;
 	};
 	private parseArrayLiteral = () => {
-		return new ArrayLiteral(
-			this.currToken,
-			this.parseExpressionList(TokenType.RBRACKET),
-		);
+		const token = this.currToken;
+		const arr = this.parseExpressionList(TokenType.RBRACKET);
+		const literal = new ArrayLiteral(token, arr);
+		literal.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
+		return literal;
 	};
 	private parseHashLiteral = () => {
 		const hash = new HashLiteral(this.currToken);
+		const token = this.currToken;
 		hash.pairs = new Map();
 		while (!this.peekTokenIs(TokenType.RBRACE)) {
 			this.nextToken();
@@ -401,6 +477,10 @@ export class Parser {
 			}
 		}
 		if (!this.expectPeek(TokenType.RBRACE)) return null;
+		hash.span = {
+			start: token.span.start,
+			end: this.currToken.span.end,
+		};
 		return hash;
 	};
 	private parseIndexExpression = (left: Expression) => {
@@ -408,6 +488,10 @@ export class Parser {
 		this.nextToken();
 		indexExpr.index = this.parseExpression(Precedences.LOWEST);
 		if (!this.expectPeek(TokenType.RBRACKET)) return null;
+		indexExpr.span = {
+			start: left.span!.start,
+			end: this.currToken.span.end,
+		};
 		return indexExpr;
 	};
 	private currTokenIs(type: TokenType) {
@@ -444,6 +528,8 @@ export class Parser {
 	}
 	// auto bind this
 	private parseIdentifier = () => {
-		return new Identifier(this.currToken, this.currToken.literal);
+		const identifier = new Identifier(this.currToken, this.currToken.literal);
+		identifier.span = this.currToken.span;
+		return identifier;
 	};
 }
