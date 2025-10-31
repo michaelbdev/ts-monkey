@@ -41,9 +41,15 @@ export const builtins: Record<string, BuiltInObject> = {
 			);
 		}
 		const result: Maybe<InternalObject>[] = [];
-		arg.elements.forEach((el, i) => {
-			result.push(applyFunction(arg2, [el, new IntegerObject(i)]));
-		});
+		for (const [i, el] of arg.elements.entries()) {
+			const res = applyFunction(arg2, [el, new IntegerObject(i)]);
+			if (res instanceof ErrorObject) {
+				return res;
+			}
+
+			result.push(res);
+		}
+
 		return new ArrayObject(result);
 	}),
 	find: new BuiltInObject(({ args }) => {
@@ -67,6 +73,7 @@ export const builtins: Record<string, BuiltInObject> = {
 		}
 		for (const el of arg.elements) {
 			const res = applyFunction(arg2, [el]);
+			if (res instanceof ErrorObject) return res;
 
 			if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
 				return new ErrorObject(
@@ -104,6 +111,7 @@ export const builtins: Record<string, BuiltInObject> = {
 		let result = arg3 ?? copy.shift();
 		for (const el of copy) {
 			result = applyFunction(arg2, [result, el]);
+			if (result instanceof ErrorObject) return result;
 		}
 		return result;
 	}),
@@ -128,6 +136,7 @@ export const builtins: Record<string, BuiltInObject> = {
 		const filtered: Maybe<InternalObject>[] = [];
 		for (const [index, el] of arg.elements.entries()) {
 			const res = applyFunction(arg2, [el, new IntegerObject(index)]);
+			if (res instanceof ErrorObject) return res;
 			if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
 				return new ErrorObject(
 					`callback must evaluate to a boolean value. got ${res?.type()}`,
