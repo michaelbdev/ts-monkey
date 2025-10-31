@@ -107,7 +107,7 @@ export const builtins: Record<string, BuiltInObject> = {
 				`'reduce' second parameter must be a function, got: ${arg2?.type()}`,
 			);
 		}
-		const copy = arg.elements;
+		const copy = arg.elements.slice();
 		let result = arg3 ?? copy.shift();
 		for (const el of copy) {
 			result = applyFunction(arg2, [result, el]);
