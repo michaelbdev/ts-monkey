@@ -492,8 +492,8 @@ const evalForStatement = (node: ForStatement, env: Environment) => {
 		return new ErrorObject("iterable does not evaluate to an array!");
 	}
 
-	const newEnv = Environment.newEnclosedEnvironment(env);
 	for (const [i, el] of iter.elements.entries()) {
+		const newEnv = Environment.newEnclosedEnvironment(env);
 		newEnv.set(node.currItem?.value!, el);
 		if (node.currIndex) {
 			newEnv.set(node.currIndex.value, new IntegerObject(i));
