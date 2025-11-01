@@ -21,10 +21,13 @@ export const builtins: Record<string, BuiltInObject> = {
 	rest: getBuiltinByName("rest")!,
 	push: getBuiltinByName("push")!,
 	set: getBuiltinByName("set")!,
-	map: new BuiltInObject(({ args }) => {
+	map: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
 		if (args.length !== 2) {
 			return new ErrorObject(
-				`wrong number of arguments. got=${args.length}, want=1`,
+				`wrong number of arguments. got=${args.length}, want=2`,
+				span,
 			);
 		}
 		const arg = args[0] as Maybe<ArrayObject>;
@@ -33,11 +36,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
 			return new ErrorObject(
 				`'map' function only accepts an array, got: ${arg?.type()}`,
+				argSpans[0],
 			);
 		}
 		if (arg2?.type() !== ObjectType.FUNCTION_OBJ) {
 			return new ErrorObject(
 				`'map' second parameter must be a function, got: ${arg2?.type()}`,
+				argSpans[1],
 			);
 		}
 		const result: Maybe<InternalObject>[] = [];
@@ -52,10 +57,13 @@ export const builtins: Record<string, BuiltInObject> = {
 
 		return new ArrayObject(result);
 	}),
-	find: new BuiltInObject(({ args }) => {
+	find: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
 		if (args.length !== 2) {
 			return new ErrorObject(
-				`wrong number of arguments. got=${args.length}, want=1`,
+				`wrong number of arguments. got=${args.length}, want=2`,
+				span,
 			);
 		}
 		const arg = args[0] as Maybe<ArrayObject>;
@@ -64,11 +72,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
 			return new ErrorObject(
 				`'find' function only accepts an array, got: ${arg?.type()}`,
+				argSpans[0],
 			);
 		}
 		if (arg2?.type() !== ObjectType.FUNCTION_OBJ) {
 			return new ErrorObject(
 				`'find' second parameter must be a function, got: ${arg2?.type()}`,
+				argSpans[1],
 			);
 		}
 		for (const el of arg.elements) {
@@ -78,6 +88,7 @@ export const builtins: Record<string, BuiltInObject> = {
 			if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
 				return new ErrorObject(
 					`callback function to 'find' must evaluate to a boolean value. got: ${res?.type()}`,
+					arg2.body.span,
 				);
 			}
 

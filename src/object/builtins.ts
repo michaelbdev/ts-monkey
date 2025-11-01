@@ -112,9 +112,11 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 					`'push' function only accepts an array, got: ${arg.type()}`,
 				);
 			}
-			const clone = arg.elements.slice();
-			clone.push(args[1]);
-			return new ArrayObject(clone);
+			//const clone = arg.elements.slice();
+			//clone.push(args[1]);
+
+			arg.elements.push(args[1]);
+			return args[0];
 		}),
 	},
 	{

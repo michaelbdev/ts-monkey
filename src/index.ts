@@ -5,8 +5,9 @@ import { Compiler } from "./compiler/compiler";
 import { Environment } from "./eval/environment";
 import { evaluate } from "./eval/eval";
 import { Lexer } from "./lexer/lexer";
+import { ErrorObject } from "./object/object";
 import { Parser } from "./parser/parser";
-import { repl } from "./repl/repl";
+import { repl, reportError } from "./repl/repl";
 import { VM } from "./vm/vm";
 (async () => {
 	if (Bun.argv.includes("--repl")) {
@@ -48,7 +49,12 @@ async function runFiles() {
 					}
 					console.log(vm.lastPoppedElement()?.inspect());
 				} else {
-					console.log(file, evaluate(program, new Environment())?.inspect());
+					const evaluated = evaluate(program, new Environment());
+					if (evaluated instanceof ErrorObject) {
+						reportError(evaluated, res);
+					} else {
+						console.log(file, evaluated?.inspect());
+					}
 				}
 				if (printAST) console.log(program);
 			});

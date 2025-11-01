@@ -726,6 +726,42 @@ describe("eval", () => {
 			expect(evaluated.msg).toBe(expected);
 		}
 	});
+	describe("spans", () => {
+		it("should attach span for type mismatch errors", () => {
+			const input = "1 + true";
+			const result = testEval(input) as ErrorObject;
+			expect(result).toBeInstanceOf(ErrorObject);
+			expect(result.msg).toContain("type mismatch");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe(
+				"1 + true",
+			);
+		});
+
+		it("should attach span for identifier not found", () => {
+			const input = "foo + 1";
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("identifier not found");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe("foo");
+		});
+
+		it("should attach span for builtin arg type errors", () => {
+			const input = `map({"a":999}, fn x => x)`;
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("only accepts an array");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe(
+				`{"a":999}`,
+			);
+		});
+
+		it("should attach span for redeclared variable", () => {
+			const input = "let a = 1; let a = 2;";
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("already been declared");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe(
+				"let a = 2",
+			);
+		});
+	});
 });
 
 function testEval(input: string) {
