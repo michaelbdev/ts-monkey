@@ -858,11 +858,13 @@ describe("parser", () => {
 			const [firstKey, firstValue] = entries[0];
 			const [secondKey, secondValue] = entries[1];
 
-			expect(input.slice(firstKey.span!.start, firstKey.span!.end)).toBe("a");
+			expect(input.slice(firstKey.span!.start, firstKey.span!.end)).toBe(`"a"`);
 			expect(input.slice(firstValue.span!.start, firstValue.span!.end)).toBe(
 				"1 + 2",
 			);
-			expect(input.slice(secondKey.span!.start, secondKey.span!.end)).toBe("b");
+			expect(input.slice(secondKey.span!.start, secondKey.span!.end)).toBe(
+				`"b"`,
+			);
 			expect(input.slice(secondValue.span!.start, secondValue.span!.end)).toBe(
 				"3",
 			);

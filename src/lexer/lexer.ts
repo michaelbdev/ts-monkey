@@ -376,13 +376,14 @@ export class Lexer {
 		return this.input[this.readPosition];
 	}
 	private readString() {
+		const spanStart = this.position;
 		this.readChar();
-		const position = this.position;
+		const literalStart = this.position;
 		while (this.ch !== '"' && this.ch !== 0) {
 			this.readChar();
 		}
-		const str = this.input.slice(position, this.position);
-		return { literal: str, start: position, end: this.position };
+		const str = this.input.slice(literalStart, this.position);
+		return { literal: str, start: spanStart, end: this.readPosition };
 	}
 	private skipComment() {
 		if (this.ch === "/" && this.peekChar() === "*") {

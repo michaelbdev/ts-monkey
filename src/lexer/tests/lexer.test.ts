@@ -43,7 +43,6 @@ describe("lexer", () => {
 			expect(token.type).toBe(test.expectedType);
 			expect(token.literal).toBe(test.expectedLiteral);
 
-			// 🔍 span check
 			const slice = input.slice(token.span.start, token.span.end);
 			if (token.type !== TokenType.STRING) {
 				expect(slice).toBe(token.literal);
@@ -113,9 +112,13 @@ describe("lexer", () => {
 
 		for (const tok of tokens) {
 			if (tok.literal.length === 0) continue; // skip EOF
-
 			const slice = input.slice(tok.span.start, tok.span.end);
-			expect(slice).toBe(tok.literal);
+
+			if (tok.type === TokenType.STRING) {
+				expect(slice).toBe(`"${tok.literal}"`);
+			} else {
+				expect(slice).toBe(tok.literal);
+			}
 		}
 	});
 	it("lexes some identifiers and integers while ignoring comments", () => {
