@@ -206,6 +206,10 @@ describe("eval", () => {
 				input: "1%0",
 				expected: "cannot divide by 0",
 			},
+			{
+				input: `let a = 1; let a = "hello"`,
+				expected: `variable "a" has already been declared`,
+			},
 		];
 		for (const { input, expected } of tests) {
 			const evaluated = testEval(input);

@@ -81,6 +81,11 @@ export function evaluate(
 		return evalIfExpression(node, env);
 	}
 	if (node instanceof LetStatement) {
+		if (node.name && env.hasInSameEnv(node.name.value)) {
+			return new ErrorObject(
+				`variable "${node.name.value}" has already been declared`,
+			);
+		}
 		const value = evaluate(node.value, env);
 		if (isError(value)) {
 			return value;
