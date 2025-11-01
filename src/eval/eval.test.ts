@@ -757,9 +757,7 @@ describe("eval", () => {
 			const input = "let a = 1; let a = 2;";
 			const result = testEval(input) as ErrorObject;
 			expect(result.msg).toContain("already been declared");
-			expect(input.slice(result.span!.start, result.span!.end)).toBe(
-				"let a = 2",
-			);
+			expect(input.slice(result.span!.start, result.span!.end)).toBe("a");
 		});
 	});
 });

@@ -84,7 +84,7 @@ export function evaluate(
 		if (node.name && env.hasInSameEnv(node.name.value)) {
 			return new ErrorObject(
 				`variable "${node.name.value}" has already been declared`,
-				node.span,
+				node.name.span,
 			);
 		}
 		const value = evaluate(node.value, env);
