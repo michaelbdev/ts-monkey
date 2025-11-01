@@ -129,6 +129,7 @@ export class Parser {
 			return null;
 		}
 		statement.name = new Identifier(this.currToken, this.currToken.literal);
+		statement.name.span = this.currToken.span;
 		if (!this.expectPeek(TokenType.ASSIGN)) {
 			return null;
 		}
