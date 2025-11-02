@@ -44,7 +44,14 @@ export async function repl() {
 
 		if (values.compiler) {
 			const compiler = new Compiler(constants, symbolTable);
-			compiler.compile(program);
+			try {
+				compiler.compile(program);
+			} catch (e) {
+				if (e instanceof ErrorObject) {
+					reportError(e, line);
+				}
+				continue;
+			}
 			const vm = new VM(compiler.bytecode(), globals);
 			vm.run();
 			if (values.bytecode) {

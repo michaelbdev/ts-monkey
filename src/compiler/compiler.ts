@@ -23,6 +23,7 @@ import { type Instructions, OpCodes, make } from "../code/code";
 import { builtins } from "../object/builtins";
 import {
 	CompiledFunctionObject,
+	ErrorObject,
 	IntegerObject,
 	type InternalObject,
 	StringObject,
@@ -177,6 +178,12 @@ export class Compiler {
 			}
 		}
 		if (node instanceof LetStatement) {
+			if (node.name && this.symbolTable.existsInScope(node.name.value)) {
+				throw new ErrorObject(
+					`variable "${node.name.value}" has already been declared`,
+					node.name.span,
+				);
+			}
 			const symbol = this.symbolTable.define(node.name?.value!);
 			this.compile(node.value);
 			if (symbol.scope === SymbolScope.GlobalScope) {
@@ -188,7 +195,7 @@ export class Compiler {
 		if (node instanceof Identifier) {
 			const symbol = this.symbolTable.resolve(node.value);
 			if (!symbol) {
-				throw new Error(`undefined variable: ${node.value}`);
+				throw new ErrorObject(`identifier not found: ${node.value}`, node.span);
 			}
 			this.loadSymbol(symbol);
 		}

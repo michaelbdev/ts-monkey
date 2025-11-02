@@ -41,12 +41,19 @@ async function runFiles() {
 				const printOps = Bun.argv.includes("--bytecode");
 				if (Bun.argv.includes("-c")) {
 					const compiler = new Compiler();
-					compiler.compile(program);
-					const vm = new VM(compiler.bytecode());
-					vm.run();
+					try {
+						compiler.compile(program);
+					} catch (e) {
+						if (e instanceof ErrorObject) {
+							reportError(e, res);
+							return;
+						}
+					}
 					if (printOps) {
 						console.log(stringify(compiler.bytecode().instructions));
 					}
+					const vm = new VM(compiler.bytecode());
+					vm.run();
 					console.log(vm.lastPoppedElement()?.inspect());
 				} else {
 					const evaluated = evaluate(program, new Environment());
