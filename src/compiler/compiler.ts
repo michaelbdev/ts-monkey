@@ -125,10 +125,15 @@ export class Compiler {
 		if (node instanceof IfExpression) {
 			this.compile(node.condition);
 			const jumpNotTruthyPos = this.emit(OpCodes.OpJumpNotTruthy, 9999);
+
+			this.symbolTable = SymbolTable.newBlockScope(this.symbolTable);
 			this.compile(node.consequence);
+			this.symbolTable = this.symbolTable.outer!;
 
 			if (this.lastInstructionIs(OpCodes.OpPop)) {
 				this.removeLastPop();
+			} else {
+				this.emit(OpCodes.OpNull);
 			}
 
 			const jumpPos = this.emit(OpCodes.OpJump, 9999);
@@ -138,9 +143,14 @@ export class Compiler {
 			if (!node.alternative) {
 				this.emit(OpCodes.OpNull);
 			} else {
+				this.symbolTable = SymbolTable.newBlockScope(this.symbolTable);
 				this.compile(node.alternative);
+				this.symbolTable = this.symbolTable.outer!;
+
 				if (this.lastInstructionIs(OpCodes.OpPop)) {
 					this.removeLastPop();
+				} else {
+					this.emit(OpCodes.OpNull);
 				}
 			}
 

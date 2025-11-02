@@ -119,17 +119,68 @@ describe("vm", () => {
 			},
 		]);
 	});
-	it("should execute if expressions", () => {
-		runVmTests([
-			{ input: "if (true) { 10 }", expected: 10 },
-			{ input: "if (true) { 10 } else { 20 }", expected: 10 },
-			{ input: "if (false) { 10 } ", expected: null },
-			{ input: "if (false) { 10 } else { 20 } ", expected: 20 },
-			{ input: "if (1) { 10 }", expected: 10 },
-			{ input: "if (1 < 2) { 10 }", expected: 10 },
-			{ input: "if (1 < 2) { 10 } else { 20 }", expected: 10 },
-			{ input: "if (1 > 2) { 10 } else { 20 }", expected: 20 },
-		]);
+	describe("if expressions", () => {
+		it("should execute", () => {
+			runVmTests([
+				{ input: "if (true) { 10 }", expected: 10 },
+				{ input: "if (true) { 10 } else { 20 }", expected: 10 },
+				{ input: "if (false) { 10 } ", expected: null },
+				{ input: "if (false) { 10 } else { 20 } ", expected: 20 },
+				{ input: "if (1) { 10 }", expected: 10 },
+				{ input: "if (1 < 2) { 10 }", expected: 10 },
+				{ input: "if (1 < 2) { 10 } else { 20 }", expected: 10 },
+				{ input: "if (1 > 2) { 10 } else { 20 }", expected: 20 },
+			]);
+		});
+		it("should be block scoped", () => {
+			runVmTests([
+				{ input: "let a =1; if(true){let a = 2}; a", expected: 1 },
+				{
+					input: "let a = 1;if(false){}else{let a = [1,2,3,4,5]}; a",
+					expected: 1,
+				},
+				{
+					input: "let a =1; let b = if (true) { let a = 200;a }; b+a ",
+					expected: 201,
+				},
+
+				{
+					input:
+						"let x = 1; if (true) { let x = 2; if (true) { let x = 3 }; x }; x",
+					expected: 1,
+				},
+
+				{
+					input:
+						"let x = 5; let y = fn(){ if(true){let x = 50; return x}; return x; }; y(); x",
+					expected: 5,
+				},
+
+				{
+					input: "let x = 10; if(true){ let y = x + 1; let x = y * 2 }; x",
+					expected: 10,
+				},
+
+				{
+					input: "let x = fn(){ if(true){ let y = 42; return y }}; x()",
+					expected: 42,
+				},
+
+				{
+					input: "let f = fn(a){ if(true){ let a = 10;a }}; f(5)",
+					expected: 10,
+				},
+				{
+					input: "let f = fn(a){ if(true){ let a = 10 }  a}; f(5)",
+					expected: 5,
+				},
+
+				{
+					input: "let x = 1; if(true){ let x = x + 1 }; x",
+					expected: 1,
+				},
+			]);
+		});
 	});
 	it("should execute let statements/identifiers", () => {
 		runVmTests([
