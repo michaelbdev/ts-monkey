@@ -176,8 +176,8 @@ describe("vm", () => {
 				},
 
 				{
-					input: "let x = 1; if(true){ let x = x + 1 }; x",
-					expected: 1,
+					input: "let x = 1; if(true){ let x = x + 1;x }; ",
+					expected: 2,
 				},
 			]);
 		});

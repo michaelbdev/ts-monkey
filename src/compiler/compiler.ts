@@ -184,8 +184,15 @@ export class Compiler {
 					node.name.span,
 				);
 			}
-			const symbol = this.symbolTable.define(node.name?.value!);
-			this.compile(node.value);
+			let symbol: SymbolType;
+			if (node.value instanceof FunctionLiteral) {
+				symbol = this.symbolTable.define(node.name?.value!);
+				this.compile(node.value);
+			} else {
+				this.compile(node.value);
+				symbol = this.symbolTable.define(node.name?.value!);
+			}
+
 			if (symbol.scope === SymbolScope.GlobalScope) {
 				this.emit(OpCodes.OpSetGlobal, symbol.index);
 			} else {
