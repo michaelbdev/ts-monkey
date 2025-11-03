@@ -167,11 +167,11 @@ const evaluatePrefixExpression = (
 		case "!":
 			return evalBangOperatorExpression(right);
 		case "-":
-			return evalMinusOperatorExpression(right, node.span!);
+			return evalMinusOperatorExpression(right, node.token.span!);
 		default:
 			return new ErrorObject(
 				`unknown operator: ${node.operator} ${right?.type()}`,
-				node!.span,
+				node!.token.span,
 			);
 	}
 };
@@ -247,7 +247,7 @@ const evaluateInfixExpression = (
 
 	return new ErrorObject(
 		`unknown operator: ${left?.type()} ${operator} ${right?.type()}`,
-		node!.span,
+		node!.token.span,
 	);
 };
 
@@ -295,7 +295,7 @@ const evalIntegerInfixExpression = (
 		default:
 			return new ErrorObject(
 				`unknown operator: ${left?.type()} ${node.operator} ${right?.type()}`,
-				node.span,
+				node.token.span,
 			);
 	}
 };
