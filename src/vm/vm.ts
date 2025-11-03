@@ -139,7 +139,7 @@ export class VM {
 					} else if (obj instanceof StringObject) {
 						this.indexString(obj, idx);
 					} else {
-						this.push(new ErrorObject(`${obj?.type()} is not indexable`));
+						this.error(`${obj?.type()} is not indexable`);
 					}
 					break;
 				}
@@ -163,13 +163,16 @@ export class VM {
 					frame.ip += 4;
 					const fn = this.bytecode.constants[index];
 					if (!(fn instanceof CompiledFunctionObject)) {
-						throw new Error("");
+						return this.error("");
 					}
 					const free = this.getFreeVariables(numFree);
-					const arr = this.pop() as ArrayObject;
-					if (!(arr instanceof ArrayObject)) {
-						throw new Error("attempting to iterate over a non iterable");
+					const obj = this.pop();
+					if (!(obj instanceof ArrayObject)) {
+						console.log("hello");
+						this.error(`${obj?.type().toLowerCase()} is not iterable`);
 					}
+
+					const arr = obj as ArrayObject;
 
 					const closure = new ClosureObject(fn, free);
 					for (let i = arr.elements.length - 1; i >= 0; i--) {
@@ -256,7 +259,7 @@ export class VM {
 	private pushClosure(constIndex: number, numFree: number) {
 		const fn = this.bytecode.constants[constIndex];
 		if (!(fn instanceof CompiledFunctionObject)) {
-			throw new Error("");
+			return this.error("");
 		}
 
 		const free = this.getFreeVariables(numFree);
@@ -271,14 +274,12 @@ export class VM {
 		if (fn instanceof BuiltInObject) {
 			return this.callBuiltin(fn, numArgs);
 		}
-		return this.push(new ErrorObject("calling non function"));
+		return this.error("calling non function");
 	}
 	private callClosure(closure: ClosureObject, numArgs: number) {
 		if (closure.fn.numParams !== numArgs) {
-			return this.push(
-				new ErrorObject(
-					`wrong number of arguments. wanted=${closure.fn.numParams}, got=${numArgs}`,
-				),
+			return this.error(
+				`wrong number of arguments. wanted=${closure.fn.numParams}, got=${numArgs}`,
 			);
 		}
 		this.pushFrame(new Frame(closure, this.stackPointer - numArgs));
@@ -300,9 +301,7 @@ export class VM {
 	}
 	private indexString(indexee: StringObject, idx: Maybe<InternalObject>) {
 		if (!(idx instanceof IntegerObject)) {
-			return this.push(
-				new ErrorObject(`${idx?.type()} cannot be used to index string`),
-			);
+			return this.error(`${idx?.type()} cannot be used to index string`);
 		}
 		const val = indexee.value.at(idx.value);
 		if (!val) {
@@ -317,7 +316,7 @@ export class VM {
 
 	push(obj: Maybe<InternalObject>) {
 		if (this.stackPointer >= STACK_SIZE) {
-			throw new Error("Stack overflow");
+			return this.error("Stack overflow");
 		}
 		this.stack[this.stackPointer] = obj;
 		this.stackPointer++;
@@ -330,11 +329,10 @@ export class VM {
 	private doBinaryOp(op: OpCodes) {
 		const n2 = this.pop();
 		const n1 = this.pop();
+		console.log({ n1, n2 });
 		if (n1?.type() !== n2?.type()) {
-			return this.push(
-				new ErrorObject(
-					`type mismatch: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
-				),
+			return this.error(
+				`type mismatch: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
 			);
 		}
 
@@ -344,10 +342,8 @@ export class VM {
 		if (n1 instanceof StringObject && n2 instanceof StringObject) {
 			return this.doStringBinaryOp(n1, op, n2);
 		}
-		return this.push(
-			new ErrorObject(
-				`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
-			),
+		return this.error(
+			`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
 		);
 	}
 	private doIntegerBinaryOp(n1: IntegerObject, op: OpCodes, n2: IntegerObject) {
@@ -358,12 +354,12 @@ export class VM {
 				return this.push(new IntegerObject(n1.value * n2.value));
 			case OpCodes.OpDiv:
 				if (n2.value === 0) {
-					return this.push(new ErrorObject("cannot divide by 0"));
+					return this.error("cannot divide by 0");
 				}
 				return this.push(new IntegerObject(n1.value / n2.value));
 			case OpCodes.OpRem:
 				if (n2.value === 0) {
-					return this.push(new ErrorObject("cannot divide by 0"));
+					return this.error("cannot divide by 0");
 				}
 				return this.push(new IntegerObject(n1.value % n2.value));
 			case OpCodes.OpSub: {
@@ -376,10 +372,8 @@ export class VM {
 	}
 	private doStringBinaryOp(n1: StringObject, op: OpCodes, n2: StringObject) {
 		if (op !== OpCodes.OpAdd) {
-			return this.push(
-				new ErrorObject(
-					`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
-				),
+			return this.error(
+				`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
 			);
 		}
 		return this.push(new StringObject(n1.value + n2.value));
@@ -388,10 +382,8 @@ export class VM {
 		const right = this.pop();
 		const left = this.pop();
 		if (left?.type() !== right?.type()) {
-			return this.push(
-				new ErrorObject(
-					`type mismatch: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
-				),
+			return this.error(
+				`type mismatch: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
 			);
 		}
 		if (left instanceof IntegerObject && right instanceof IntegerObject) {
@@ -422,10 +414,8 @@ export class VM {
 				this.push(this.nativeBoolToBooleanObject(left !== right));
 				break;
 			default:
-				return this.push(
-					new ErrorObject(
-						`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
-					),
+				return this.error(
+					`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
 				);
 		}
 	}
@@ -453,7 +443,7 @@ export class VM {
 				);
 
 			default:
-				throw new Error(`unknown operator ${op}`);
+				this.error(`unknown operator ${op}`);
 		}
 	}
 	private executeStringComparison(
@@ -473,10 +463,8 @@ export class VM {
 				);
 
 			default:
-				return this.push(
-					new ErrorObject(
-						`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
-					),
+				return this.error(
+					`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
 				);
 		}
 	}
@@ -499,9 +487,7 @@ export class VM {
 	private executeMinusOperator() {
 		const val = this.pop();
 		if (!(val instanceof IntegerObject)) {
-			return this.push(
-				new ErrorObject("TypeError: unsupported type for negation"),
-			);
+			return this.error("TypeError: unsupported type for negation");
 		}
 		this.push(new IntegerObject(-val.value));
 	}
@@ -522,9 +508,7 @@ export class VM {
 					key instanceof BooleanObject
 				)
 			) {
-				return this.push(
-					new ErrorObject(`cannot use ${key?.type()} as hash key`),
-				);
+				return this.error(`cannot use ${key?.type()} as hash key`);
 			}
 			map.set(key!.value, pair);
 		}
@@ -540,9 +524,7 @@ export class VM {
 	}
 	private indexArray(arr: ArrayObject, idx: Maybe<InternalObject>) {
 		if (!(idx instanceof IntegerObject)) {
-			return this.push(
-				new ErrorObject(`${idx?.type()} cannot be used to index arrays`),
-			);
+			return this.error(`${idx?.type()} cannot be used to index arrays`);
 		}
 		if (idx.value < 0 || idx.value > arr.elements.length - 1) {
 			this.push(NULL_OBJ);
@@ -558,7 +540,7 @@ export class VM {
 				idx instanceof StringObject
 			)
 		) {
-			return new ErrorObject(`${idx?.type()} cannot be used to index arrays`);
+			return this.error(`${idx?.type()} cannot be used to index hash`);
 		}
 		const pair = hash.pairs.get(idx.value);
 		if (!pair) {
@@ -588,5 +570,8 @@ export class VM {
 	}
 	private nativeBoolToBooleanObject(bool: boolean) {
 		return bool ? TRUE_OBJ : FALSE_OBJ;
+	}
+	error(msg: string) {
+		throw new ErrorObject(msg);
 	}
 }

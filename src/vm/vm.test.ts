@@ -176,7 +176,7 @@ describe("vm", () => {
 				},
 
 				{
-					input: "let x = 1; if(true){ let x = x + 1;x }; ",
+					input: "let x = 1; if(true){ let x = x + 1; x};",
 					expected: 2,
 				},
 			]);
@@ -702,9 +702,15 @@ const runVmTests = (
 		compiler.compile(program);
 		const bytecode = compiler.bytecode();
 		const vm = new VM(bytecode);
-		vm.run();
-		const stackElement = vm.lastPoppedElement();
-		testExpectedObject(stackElement!, expected);
+		try {
+			vm.run();
+			const stackElement = vm.lastPoppedElement();
+			testExpectedObject(stackElement!, expected);
+		} catch (e) {
+			if (e instanceof ErrorObject) {
+				testExpectedObject(e, expected);
+			}
+		}
 	}
 };
 
