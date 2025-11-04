@@ -22,6 +22,7 @@ import {
 	StringObject,
 	TRUE_OBJ,
 } from "../object/object";
+import type { Span } from "../token/token";
 import type { Maybe } from "../utils/types";
 import { Frame } from "./frame";
 
@@ -111,9 +112,9 @@ export class VM {
 				}
 				case OpCodes.OpHash: {
 					const num = readUint16(instructions, ip + 1);
+					const span = this.getSpan();
 					frame.ip += 2;
-					const map = this.buildHash(num);
-					// map won't exist if we encounter error building hash, we stop and push error onto the stack instead
+					const map = this.buildHash(num, span);
 					if (map) {
 						this.push(new HashObject(map));
 					}
@@ -152,14 +153,16 @@ export class VM {
 				}
 				case OpCodes.OpCall: {
 					const numArgs = readUint8(instructions, ip + 1);
+					const span = this.getSpan();
 					this.currentFrame.ip += 1;
-					this.executeCall(numArgs);
+					this.executeCall(numArgs, span!);
 					break;
 				}
 				case OpCodes.OpFor: {
 					const index = readUint16(instructions, ip + 1);
 					const numArgs = readUint8(instructions, ip + 3);
 					const numFree = readUint8(instructions, ip + 4);
+					const span = this.getSpan();
 					frame.ip += 4;
 					const fn = this.bytecode.constants[index];
 					if (!(fn instanceof CompiledFunctionObject)) {
@@ -168,8 +171,10 @@ export class VM {
 					const free = this.getFreeVariables(numFree);
 					const obj = this.pop();
 					if (!(obj instanceof ArrayObject)) {
-						console.log("hello");
-						this.error(`${obj?.type().toLowerCase()} is not iterable`);
+						this.error(
+							`${obj?.type().toLowerCase()} is not iterable`,
+							span!.argSpans?.[0],
+						);
 					}
 
 					const arr = obj as ArrayObject;
@@ -266,26 +271,30 @@ export class VM {
 		const closure = new ClosureObject(fn, free);
 		return this.push(closure);
 	}
-	private executeCall(numArgs: number) {
+	private executeCall(numArgs: number, span: Span) {
 		const fn = this.stack[this.stackPointer - numArgs - 1];
 		if (fn instanceof ClosureObject) {
-			return this.callClosure(fn, numArgs);
+			return this.callClosure(fn, numArgs, span);
 		}
 		if (fn instanceof BuiltInObject) {
-			return this.callBuiltin(fn, numArgs);
+			return this.callBuiltin(fn, numArgs, span);
 		}
-		return this.error("calling non function");
+		return this.error(
+			`${fn?.inspect()} is not a function, got type: ${fn?.type().toLowerCase()}`,
+			span.fnSpan,
+		);
 	}
-	private callClosure(closure: ClosureObject, numArgs: number) {
+	private callClosure(closure: ClosureObject, numArgs: number, span: Span) {
 		if (closure.fn.numParams !== numArgs) {
 			return this.error(
 				`wrong number of arguments. wanted=${closure.fn.numParams}, got=${numArgs}`,
+				span,
 			);
 		}
 		this.pushFrame(new Frame(closure, this.stackPointer - numArgs));
 		this.stackPointer = this.currentFrame.basePointer + closure.fn.numLocals;
 	}
-	private callBuiltin(fn: BuiltInObject, numArgs: number) {
+	private callBuiltin(fn: BuiltInObject, numArgs: number, span: Span) {
 		const args = this.stack.slice(
 			this.stackPointer - numArgs,
 			this.stackPointer,
@@ -295,13 +304,17 @@ export class VM {
 			bytecode: this.bytecode,
 			globals: this.globals,
 			args,
+			span,
 		});
 		this.stackPointer = this.stackPointer - numArgs - 1;
 		this.push(res);
 	}
 	private indexString(indexee: StringObject, idx: Maybe<InternalObject>) {
 		if (!(idx instanceof IntegerObject)) {
-			return this.error(`${idx?.type()} cannot be used to index string`);
+			return this.error(
+				`${idx?.type().toLowerCase()} cannot be used to index string`,
+				this.getSpan()?.indexSpan,
+			);
 		}
 		const val = indexee.value.at(idx.value);
 		if (!val) {
@@ -329,10 +342,11 @@ export class VM {
 	private doBinaryOp(op: OpCodes) {
 		const n2 = this.pop();
 		const n1 = this.pop();
-		console.log({ n1, n2 });
+		const span = this.getSpan();
 		if (n1?.type() !== n2?.type()) {
 			return this.error(
 				`type mismatch: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
+				span?.operatorSpan,
 			);
 		}
 
@@ -344,9 +358,11 @@ export class VM {
 		}
 		return this.error(
 			`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
+			span?.operatorSpan,
 		);
 	}
 	private doIntegerBinaryOp(n1: IntegerObject, op: OpCodes, n2: IntegerObject) {
+		const span = this.getSpan();
 		switch (op) {
 			case OpCodes.OpAdd:
 				return this.push(new IntegerObject(n1.value + n2.value));
@@ -354,12 +370,12 @@ export class VM {
 				return this.push(new IntegerObject(n1.value * n2.value));
 			case OpCodes.OpDiv:
 				if (n2.value === 0) {
-					return this.error("cannot divide by 0");
+					return this.error("cannot divide by 0", span?.rhsSpan);
 				}
 				return this.push(new IntegerObject(n1.value / n2.value));
 			case OpCodes.OpRem:
 				if (n2.value === 0) {
-					return this.error("cannot divide by 0");
+					return this.error("cannot divide by 0", span?.rhsSpan);
 				}
 				return this.push(new IntegerObject(n1.value % n2.value));
 			case OpCodes.OpSub: {
@@ -371,9 +387,11 @@ export class VM {
 		}
 	}
 	private doStringBinaryOp(n1: StringObject, op: OpCodes, n2: StringObject) {
+		const span = this.getSpan();
 		if (op !== OpCodes.OpAdd) {
 			return this.error(
 				`unknown operator: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
+				span?.operatorSpan,
 			);
 		}
 		return this.push(new StringObject(n1.value + n2.value));
@@ -381,9 +399,11 @@ export class VM {
 	private executeComparison(op: OpCodes) {
 		const right = this.pop();
 		const left = this.pop();
+		const span = this.getSpan();
 		if (left?.type() !== right?.type()) {
 			return this.error(
 				`type mismatch: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
+				span?.operatorSpan,
 			);
 		}
 		if (left instanceof IntegerObject && right instanceof IntegerObject) {
@@ -416,6 +436,7 @@ export class VM {
 			default:
 				return this.error(
 					`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
+					span?.operatorSpan,
 				);
 		}
 	}
@@ -465,6 +486,7 @@ export class VM {
 			default:
 				return this.error(
 					`unknown operator: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
+					this.getSpan()?.operatorSpan,
 				);
 		}
 	}
@@ -487,15 +509,17 @@ export class VM {
 	private executeMinusOperator() {
 		const val = this.pop();
 		if (!(val instanceof IntegerObject)) {
-			return this.error("TypeError: unsupported type for negation");
+			return this.error(`cannot negate ${val?.type().toLowerCase()}`);
 		}
 		this.push(new IntegerObject(-val.value));
 	}
-	private buildHash(numOfPairs: number) {
+	private buildHash(numOfPairs: number, span: Span | undefined) {
 		const map = new Map();
 		for (let i = 0; i < numOfPairs; i++) {
 			const value = this.pop();
 			const key = this.pop();
+			const idx = numOfPairs - 1 - i;
+			const keySpan = span?.keySpans?.[idx];
 
 			const pair = {
 				key,
@@ -508,7 +532,10 @@ export class VM {
 					key instanceof BooleanObject
 				)
 			) {
-				return this.error(`cannot use ${key?.type()} as hash key`);
+				return this.error(
+					`cannot use ${key?.type().toLowerCase()} as hash key`,
+					keySpan,
+				);
 			}
 			map.set(key!.value, pair);
 		}
@@ -524,7 +551,10 @@ export class VM {
 	}
 	private indexArray(arr: ArrayObject, idx: Maybe<InternalObject>) {
 		if (!(idx instanceof IntegerObject)) {
-			return this.error(`${idx?.type()} cannot be used to index arrays`);
+			return this.error(
+				`${idx?.type().toLowerCase()} cannot be used to index arrays`,
+				this.getSpan()?.indexSpan,
+			);
 		}
 		if (idx.value < 0 || idx.value > arr.elements.length - 1) {
 			this.push(NULL_OBJ);
@@ -540,7 +570,10 @@ export class VM {
 				idx instanceof StringObject
 			)
 		) {
-			return this.error(`${idx?.type()} cannot be used to index hash`);
+			return this.error(
+				`${idx?.type().toLowerCase()} cannot be used to index hash`,
+				this.getSpan()?.indexSpan,
+			);
 		}
 		const pair = hash.pairs.get(idx.value);
 		if (!pair) {
@@ -571,7 +604,10 @@ export class VM {
 	private nativeBoolToBooleanObject(bool: boolean) {
 		return bool ? TRUE_OBJ : FALSE_OBJ;
 	}
-	error(msg: string) {
-		throw new ErrorObject(msg);
+	private getSpan() {
+		return this.bytecode.spanMap.get(this.currentFrame.ip);
+	}
+	error(msg: string, span?: Span) {
+		throw new ErrorObject(msg, span || this.getSpan());
 	}
 }

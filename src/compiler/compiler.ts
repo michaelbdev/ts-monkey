@@ -28,6 +28,7 @@ import {
 	type InternalObject,
 	StringObject,
 } from "../object/object";
+import type { Span } from "../token/token";
 import type { Maybe } from "../utils/types";
 import { SymbolScope, SymbolTable, type SymbolType } from "./symbol-table";
 
@@ -40,6 +41,7 @@ export class Compiler {
 			previousInstruction: undefined,
 		},
 	];
+	public spanMap = new Map<number, Span>();
 	constructor(
 		private constants: Maybe<InternalObject>[] = [],
 		public symbolTable: SymbolTable = new SymbolTable(),
@@ -55,69 +57,75 @@ export class Compiler {
 		}
 		if (node instanceof ExpressionStatement) {
 			this.compile(node.expression);
-			this.emit(OpCodes.OpPop);
+			this.emit(OpCodes.OpPop, node.span);
 		}
 		if (node instanceof BooleanLiteral) {
 			if (node.value) {
-				this.emit(OpCodes.OpTrue);
+				this.emit(OpCodes.OpTrue, node.span);
 			} else {
-				this.emit(OpCodes.OpFalse);
+				this.emit(OpCodes.OpFalse, node.span);
 			}
 		}
 		if (node instanceof InfixExpression) {
+			const span = {
+				...node.span!,
+				operatorSpan: node.token.span,
+				rhsSpan: node.rightExpr?.span,
+			};
 			if (node.operator === "<") {
 				this.compile(node.rightExpr);
 				this.compile(node.leftExpr);
-				this.emit(OpCodes.OpGreaterThan);
+				this.emit(OpCodes.OpGreaterThan, span);
 				return null;
 			}
 			if (node.operator === "<=") {
 				this.compile(node.rightExpr);
 				this.compile(node.leftExpr);
-				this.emit(OpCodes.OpGreaterThanOrEqual);
+				this.emit(OpCodes.OpGreaterThanOrEqual, span);
 				return null;
 			}
 			this.compile(node.leftExpr);
 			this.compile(node.rightExpr);
 			switch (node.operator) {
 				case "+":
-					this.emit(OpCodes.OpAdd);
+					this.emit(OpCodes.OpAdd, span);
 					break;
 
 				case "-":
-					this.emit(OpCodes.OpSub);
+					this.emit(OpCodes.OpSub, span);
 					break;
 
 				case "*":
-					this.emit(OpCodes.OpMult);
+					this.emit(OpCodes.OpMult, span);
 					break;
 				case "/":
-					this.emit(OpCodes.OpDiv);
+					this.emit(OpCodes.OpDiv, span);
 					break;
-				case "%":
-					this.emit(OpCodes.OpRem);
+				case "%": {
+					this.emit(OpCodes.OpRem, span);
 					break;
+				}
 
 				case "==":
-					this.emit(OpCodes.OpEqual);
+					this.emit(OpCodes.OpEqual, span);
 					break;
 
 				case "!=":
-					this.emit(OpCodes.OpNotEqual);
+					this.emit(OpCodes.OpNotEqual, span);
 					break;
 
 				case ">":
-					this.emit(OpCodes.OpGreaterThan);
+					this.emit(OpCodes.OpGreaterThan, span);
 					break;
 				case ">=":
-					this.emit(OpCodes.OpGreaterThanOrEqual);
+					this.emit(OpCodes.OpGreaterThanOrEqual, span);
 					break;
 
 				case "||":
-					this.emit(OpCodes.OpOr);
+					this.emit(OpCodes.OpOr, span);
 					break;
 				case "&&":
-					this.emit(OpCodes.OpAnd);
+					this.emit(OpCodes.OpAnd, span);
 					break;
 				default:
 					break;
@@ -125,7 +133,11 @@ export class Compiler {
 		}
 		if (node instanceof IfExpression) {
 			this.compile(node.condition);
-			const jumpNotTruthyPos = this.emit(OpCodes.OpJumpNotTruthy, 9999);
+			const jumpNotTruthyPos = this.emit(
+				OpCodes.OpJumpNotTruthy,
+				node.span,
+				9999,
+			);
 
 			this.symbolTable = SymbolTable.newBlockScope(this.symbolTable);
 			this.compile(node.consequence);
@@ -134,15 +146,15 @@ export class Compiler {
 			if (this.lastInstructionIs(OpCodes.OpPop)) {
 				this.removeLastPop();
 			} else {
-				this.emit(OpCodes.OpNull);
+				this.emit(OpCodes.OpNull, node.span);
 			}
 
-			const jumpPos = this.emit(OpCodes.OpJump, 9999);
+			const jumpPos = this.emit(OpCodes.OpJump, node.span, 9999);
 			const afterConsequencePos = this.currentInstructions.length;
 			this.changeOperand(jumpNotTruthyPos, afterConsequencePos);
 
 			if (!node.alternative) {
-				this.emit(OpCodes.OpNull);
+				this.emit(OpCodes.OpNull, node.span);
 			} else {
 				this.symbolTable = SymbolTable.newBlockScope(this.symbolTable);
 				this.compile(node.alternative);
@@ -151,7 +163,7 @@ export class Compiler {
 				if (this.lastInstructionIs(OpCodes.OpPop)) {
 					this.removeLastPop();
 				} else {
-					this.emit(OpCodes.OpNull);
+					this.emit(OpCodes.OpNull, node.span);
 				}
 			}
 
@@ -167,10 +179,10 @@ export class Compiler {
 			this.compile(node.rightExpression);
 			switch (node.operator) {
 				case "!":
-					this.emit(OpCodes.OpBang);
+					this.emit(OpCodes.OpBang, node.span);
 					break;
 				case "-":
-					this.emit(OpCodes.OpMinus);
+					this.emit(OpCodes.OpMinus, node.token.span);
 					break;
 
 				default:
@@ -192,11 +204,10 @@ export class Compiler {
 				this.compile(node.value);
 				symbol = this.symbolTable.define(node.name?.value!);
 			}
-
 			if (symbol.scope === SymbolScope.GlobalScope) {
-				this.emit(OpCodes.OpSetGlobal, symbol.index);
+				this.emit(OpCodes.OpSetGlobal, node.span, symbol.index);
 			} else {
-				this.emit(OpCodes.OpSetLocal, symbol.index);
+				this.emit(OpCodes.OpSetLocal, node.span, symbol.index);
 			}
 		}
 		if (node instanceof Identifier) {
@@ -204,30 +215,36 @@ export class Compiler {
 			if (!symbol) {
 				throw new ErrorObject(`identifier not found: ${node.value}`, node.span);
 			}
-			this.loadSymbol(symbol);
+			this.loadSymbol(symbol, node.span);
 		}
 
 		if (node instanceof ArrayLiteral) {
 			node.elements?.forEach((el) => this.compile(el));
-			this.emit(OpCodes.OpArray, node.elements?.length!);
+			this.emit(OpCodes.OpArray, node.span, node.elements?.length!);
 		}
 
 		if (node instanceof HashLiteral) {
 			const keys = Array.from(node.pairs!.keys());
+			const keySpans = keys.map((k) => k.span!);
 			keys.forEach((key) => {
 				this.compile(key);
 				this.compile(node.pairs?.get(key));
 			});
-			this.emit(OpCodes.OpHash, node.pairs!.size);
+			const span = {
+				...node.span!,
+				keySpans,
+			};
+			this.emit(OpCodes.OpHash, span, node.pairs!.size);
 		}
 
 		if (node instanceof IntegerLiteral) {
 			const integer = new IntegerObject(node.value!);
-			this.emit(OpCodes.OpConstant, this.addConstant(integer));
+			this.emit(OpCodes.OpConstant, node.span, this.addConstant(integer));
 		}
 		if (node instanceof StringLiteral) {
 			this.emit(
 				OpCodes.OpConstant,
+				node.span,
 				this.addConstant(new StringObject(node.value)),
 			);
 		}
@@ -241,31 +258,33 @@ export class Compiler {
 				node.isArrow && !(node.body instanceof BlockStatement);
 			if (this.lastInstructionIs(OpCodes.OpPop)) {
 				this.removeLastPop();
-				this.emit(OpCodes.OpReturnValue);
+				this.emit(OpCodes.OpReturnValue, node.span);
 			} else if (isShortenedArrow) {
-				this.emit(OpCodes.OpReturnValue);
+				this.emit(OpCodes.OpReturnValue, node.span);
 			}
 
 			if (!this.lastInstructionIs(OpCodes.OpReturnValue)) {
-				this.emit(OpCodes.OpReturn);
+				this.emit(OpCodes.OpReturn, node.span);
 			}
 
 			const numLocals = this.symbolTable.numDefs;
 			const free = this.symbolTable.freeSymbols;
 			const instructions = this.leaveScope();
-			free.forEach((sym) => this.loadSymbol(sym));
+			free.forEach((sym) => this.loadSymbol(sym, node.span));
 			const fn = new CompiledFunctionObject(
 				instructions,
 				numLocals,
 				node.parameters!.length,
 			);
 			const index = this.addConstant(fn);
-			this.emit(OpCodes.OpClosure, index, free.length);
+			this.emit(OpCodes.OpClosure, node.span, index, free.length);
 		}
 		if (node instanceof CallExpression) {
 			this.compile(node.func);
 			node.args?.forEach((arg) => this.compile(arg));
-			this.emit(OpCodes.OpCall, node.args!.length);
+			const argSpans = node.args?.map((a) => a.span!) || [];
+			const span: Span = { ...node.span!, fnSpan: node!.func!.span, argSpans };
+			this.emit(OpCodes.OpCall, span, node.args!.length);
 		}
 		if (node instanceof ForStatement) {
 			this.compile(node.iterable);
@@ -277,13 +296,13 @@ export class Compiler {
 			}
 
 			this.compile(node.body);
-			this.emit(OpCodes.OpPopFrame);
+			this.emit(OpCodes.OpPopFrame, node.span);
 
 			const free = this.symbolTable.freeSymbols;
 			const numDefs = this.symbolTable.numDefs;
 
 			const instructions = this.leaveScope();
-			free.forEach((sym) => this.loadSymbol(sym));
+			free.forEach((sym) => this.loadSymbol(sym, node.span));
 
 			const fn = new CompiledFunctionObject(
 				instructions,
@@ -291,36 +310,44 @@ export class Compiler {
 				node.currIndex ? 2 : 1,
 			);
 
+			const argSpans = [node.iterable?.span!];
 			const index = this.addConstant(fn);
-			this.emit(OpCodes.OpFor, index, node.currIndex ? 2 : 1, free.length);
-			this.emit(OpCodes.OpNull);
-			this.emit(OpCodes.OpPop);
+			this.emit(
+				OpCodes.OpFor,
+				{ ...node.span!, argSpans },
+				index,
+				node.currIndex ? 2 : 1,
+				free.length,
+			);
+			this.emit(OpCodes.OpNull, node.span);
+			this.emit(OpCodes.OpPop, node.span);
 		}
 		if (node instanceof ReturnStatement) {
 			this.compile(node.value);
-			this.emit(OpCodes.OpReturnValue);
+			this.emit(OpCodes.OpReturnValue, node.span);
 		}
 		if (node instanceof IndexExpression) {
 			this.compile(node.left);
 			this.compile(node.index);
-			this.emit(OpCodes.OpIndex);
+			const span = { ...node.left.span!, indexSpan: node.index?.span };
+			this.emit(OpCodes.OpIndex, span);
 		}
 
 		return null;
 	}
-	private loadSymbol(symbol: SymbolType) {
+	private loadSymbol(symbol: SymbolType, span: Span | undefined) {
 		switch (symbol.scope) {
 			case SymbolScope.GlobalScope:
-				this.emit(OpCodes.OpGetGlobal, symbol.index);
+				this.emit(OpCodes.OpGetGlobal, span, symbol.index);
 				break;
 			case SymbolScope.BuiltinScope:
-				this.emit(OpCodes.OpGetBuiltin, symbol.index);
+				this.emit(OpCodes.OpGetBuiltin, span, symbol.index);
 				break;
 			case SymbolScope.LocalScope:
-				this.emit(OpCodes.OpGetLocal, symbol.index);
+				this.emit(OpCodes.OpGetLocal, span, symbol.index);
 				break;
 			case SymbolScope.FreeScope:
-				this.emit(OpCodes.OpGetFree, symbol.index);
+				this.emit(OpCodes.OpGetFree, span, symbol.index);
 				break;
 			default:
 				break;
@@ -330,10 +357,13 @@ export class Compiler {
 		this.constants.push(obj);
 		return this.constants.length - 1;
 	}
-	emit(op: OpCodes, ...operands: number[]) {
+	emit(op: OpCodes, span: Span | undefined, ...operands: number[]) {
 		const instruction = make(op, ...operands);
 		const pos = this.addInstruction(instruction);
 		this.setLastInstruction(op, pos);
+		if (span) {
+			this.spanMap.set(pos, span);
+		}
 		return pos;
 	}
 	private setLastInstruction(op: OpCodes, pos: number) {
@@ -392,7 +422,7 @@ export class Compiler {
 		return this.scopes[this.scopeIndex].lastInstruction?.opcode === op;
 	}
 	bytecode() {
-		return new Bytecode(this.currentInstructions, this.constants);
+		return new Bytecode(this.currentInstructions, this.constants, this.spanMap);
 	}
 	private get currentInstructions() {
 		return this.scopes[this.scopeIndex].instructions;
@@ -403,6 +433,7 @@ export class Bytecode {
 	constructor(
 		public instructions: Instructions,
 		public constants: Maybe<InternalObject>[],
+		public spanMap: Map<number, Span>,
 	) {}
 }
 

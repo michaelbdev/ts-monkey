@@ -245,11 +245,11 @@ describe("vm", () => {
 			runVmTests([
 				{
 					input: "{[1]:2}",
-					expected: new ErrorObject("cannot use ARRAY as hash key"),
+					expected: new ErrorObject("cannot use array as hash key"),
 				},
 				{
 					input: "{[1]:2, 5:10}",
-					expected: new ErrorObject("cannot use ARRAY as hash key"),
+					expected: new ErrorObject("cannot use array as hash key"),
 				},
 			]);
 		});
@@ -452,10 +452,13 @@ describe("vm", () => {
 	});
 	it("should return error if a non function tries to be called", () => {
 		runVmTests([
-			{ input: "1()", expected: new ErrorObject("calling non function") },
+			{
+				input: "1()",
+				expected: new ErrorObject("1 is not a function, got type: integer"),
+			},
 			{
 				input: "let a = true; a()",
-				expected: new ErrorObject("calling non function"),
+				expected: new ErrorObject("true is not a function, got type: boolean"),
 			},
 		]);
 	});
@@ -468,13 +471,13 @@ describe("vm", () => {
 			{
 				input: "len(1)",
 				expected: new ErrorObject(
-					"argument to 'len' not supported, got INTEGER",
+					"argument to 'len' not supported, got integer",
 				),
 			},
 			{
 				input: "len(1)",
 				expected: new ErrorObject(
-					"argument to 'len' not supported, got INTEGER",
+					"argument to 'len' not supported, got integer",
 				),
 			},
 			{
@@ -491,7 +494,7 @@ describe("vm", () => {
 			{
 				input: "first(1)",
 				expected: new ErrorObject(
-					"'first' function only accepts an array, got: INTEGER",
+					"'first' function only accepts an array, got: integer",
 				),
 			},
 
@@ -500,7 +503,7 @@ describe("vm", () => {
 			{
 				input: "last(1)",
 				expected: new ErrorObject(
-					"'last' function only accepts an array, got: INTEGER",
+					"'last' function only accepts an array, got: integer",
 				),
 			},
 
@@ -594,18 +597,18 @@ describe("vm", () => {
 			{
 				input: ` set([],"b",2)`,
 				expected: new ErrorObject(
-					"set's first argument must be a hashmap, got ARRAY",
+					"set's first argument must be a hashmap, got array",
 				),
 			},
 			{
 				input: "set(1,1,1)",
 				expected: new ErrorObject(
-					"set's first argument must be a hashmap, got INTEGER",
+					"set's first argument must be a hashmap, got integer",
 				),
 			},
 			{
 				input: "set({},[],1)",
-				expected: new ErrorObject("not a valid hash key"),
+				expected: new ErrorObject("not a valid hash key: array"),
 			},
 		]);
 	});

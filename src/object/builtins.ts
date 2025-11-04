@@ -1,5 +1,6 @@
 import { type Instructions, OpCodes, make } from "../code/code";
 import { Bytecode } from "../compiler/compiler";
+import type { Span } from "../token/token";
 import type { Maybe } from "../utils/types";
 import { VM } from "../vm/vm";
 import {
@@ -20,10 +21,11 @@ import {
 export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	{
 		name: "len",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
 			if (args.length !== 1) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arg = args[0];
@@ -34,8 +36,9 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 				case ObjectType.ARRAY_OBJ:
 					return new IntegerObject((arg as ArrayObject).elements.length);
 				default:
-					return new ErrorObject(
-						`argument to 'len' not supported, got ${args[0]!.type()}`,
+					throw new ErrorObject(
+						`argument to 'len' not supported, got ${args[0]!.type().toLowerCase()}`,
+						span.argSpans?.[0],
 					);
 			}
 		}),
@@ -49,16 +52,18 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 	{
 		name: "first",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
 			if (args.length !== 1) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arg = args[0] as ArrayObject;
 			if (arg?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'first' function only accepts an array, got: ${arg.type()}`,
+				throw new ErrorObject(
+					`'first' function only accepts an array, got: ${arg.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			return arg.elements[0] || NULL_OBJ;
@@ -66,16 +71,18 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 	{
 		name: "last",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
 			if (args.length !== 1) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arg = args[0] as ArrayObject;
 			if (arg?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'last' function only accepts an array, got: ${arg.type()}`,
+				throw new ErrorObject(
+					`'last' function only accepts an array, got: ${arg.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			return arg.elements.at(-1) || NULL_OBJ;
@@ -83,16 +90,18 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 	{
 		name: "rest",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
 			if (args.length !== 1) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arg = args[0] as ArrayObject;
 			if (arg?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'rest' function only accepts an array, got: ${arg.type()}`,
+				throw new ErrorObject(
+					`'rest' function only accepts an array, got: ${arg.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			return new ArrayObject(arg.elements.slice(1));
@@ -100,33 +109,35 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 	{
 		name: "push",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
 			if (args.length !== 2) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=2`,
+					span,
 				);
 			}
 			const arg = args[0] as ArrayObject;
 			if (arg?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'push' function only accepts an array, got: ${arg.type()}`,
+				throw new ErrorObject(
+					`'push' function only accepts an array, got: ${arg.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
-			//const clone = arg.elements.slice();
-			//clone.push(args[1]);
+			const clone = arg.elements.slice();
+			clone.push(args[1]);
 
-			arg.elements.push(args[1]);
-			return args[0];
+			return new ArrayObject(clone);
 		}),
 	},
 	{
 		name: "map",
 		builtin: new BuiltInObject((obj) => {
-			const { args, bytecode, globals } = assertEnvironment(obj);
+			const { args, span, bytecode, globals } = assertEnvironment(obj);
 
 			if (args.length !== 2) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arr = args[0] as Maybe<ArrayObject>;
@@ -134,21 +145,27 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 			const callback = closure?.fn;
 
 			if (arr?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'map' function only accepts an array, got: ${arr?.type()}`,
+				throw new ErrorObject(
+					`'map' function only accepts an array, got: ${arr?.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 
 			if (callback?.type() !== ObjectType.COMPILED_FUNCTION_OBJ) {
-				return new ErrorObject(
-					`'map' second parameter must be a function, got: ${callback?.type()}`,
+				throw new ErrorObject(
+					`'map' second parameter must be a function, got: ${closure?.type().toLowerCase()}`,
+
+					span.argSpans?.[1],
 				);
 			}
 			const result = [];
 			const ins = replaceReturnWithPop(callback.instructions);
 			for (let i = 0; i < arr.elements.length; i++) {
 				const el = arr.elements[i];
-				const vm2 = new VM(new Bytecode(ins, bytecode.constants), globals);
+				const vm2 = new VM(
+					new Bytecode(ins, bytecode.constants, bytecode.spanMap),
+					globals,
+				);
 				vm2.push(el);
 				vm2.push(new IntegerObject(i));
 				vm2.run();
@@ -161,11 +178,12 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	{
 		name: "find",
 		builtin: new BuiltInObject((obj) => {
-			const { args, bytecode, globals } = assertEnvironment(obj);
+			const { args, bytecode, span, globals } = assertEnvironment(obj);
 
 			if (args.length !== 2) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=1`,
+					span,
 				);
 			}
 			const arr = args[0] as Maybe<ArrayObject>;
@@ -173,24 +191,33 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 			const callback = closure?.fn;
 
 			if (arr?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'find' function only accepts an array, got: ${arr?.type()}`,
+				throw new ErrorObject(
+					`'find' function only accepts an array, got: ${arr?.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			if (callback?.type() !== ObjectType.COMPILED_FUNCTION_OBJ) {
-				return new ErrorObject(
-					`'find' second parameter must be a function, got: ${callback?.type()}`,
+				throw new ErrorObject(
+					`'find' second parameter must be a function, got: ${closure?.type().toLowerCase()}`,
+					span.argSpans?.[1],
 				);
 			}
 			const instructions = replaceReturnWithPop(callback.instructions);
 			for (const el of arr.elements) {
-				const vm2 = newVMForBuiltins(instructions, bytecode.constants, globals);
+				const vm2 = newVMForBuiltins(
+					instructions,
+					bytecode.constants,
+					bytecode.spanMap,
+					globals,
+				);
 				vm2.push(el);
 				vm2.run();
 				const res = vm2.lastPoppedElement();
 				if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
-					return new ErrorObject(
-						`callback function to 'find' must evaluate to a boolean value. got: ${res?.type()}`,
+					throw new ErrorObject(
+						`callback function to 'find' must evaluate to a boolean value. got: ${res?.type().toLowerCase()}`,
+						// we can't be a granular as interpreter, where we use the span of the body of the callback, so we just use span for the entire cb
+						span.argSpans?.[1],
 					);
 				}
 				if (res === TRUE_OBJ) {
@@ -203,11 +230,12 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	{
 		name: "reduce",
 		builtin: new BuiltInObject((obj) => {
-			const { args, bytecode, globals } = assertEnvironment(obj);
+			const { args, bytecode, span, globals } = assertEnvironment(obj);
 
 			if (args.length < 2) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=2|3`,
+					span,
 				);
 			}
 			const arr = args[0] as Maybe<ArrayObject>;
@@ -216,13 +244,15 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 			const arg3 = args[2] as Maybe<InternalObject>;
 
 			if (arr?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'reduce' function only accepts an array, got: ${arr?.type()}`,
+				throw new ErrorObject(
+					`'reduce' function only accepts an array, got: ${arr?.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			if (callback?.type() !== ObjectType.COMPILED_FUNCTION_OBJ) {
-				return new ErrorObject(
-					`'reduce' second parameter must be a function, got: ${callback?.type()}`,
+				throw new ErrorObject(
+					`'reduce' second parameter must be a function, got: ${closure?.type().toLowerCase()}`,
+					span.argSpans?.[1],
 				);
 			}
 			const copy = arr.elements.slice();
@@ -231,7 +261,12 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 			let result = arg3 ?? copy.shift();
 
 			for (const el of copy) {
-				const vm2 = newVMForBuiltins(instructions, bytecode.constants, globals);
+				const vm2 = newVMForBuiltins(
+					instructions,
+					bytecode.constants,
+					bytecode.spanMap,
+					globals,
+				);
 				vm2.push(result);
 				vm2.push(el);
 				vm2.run();
@@ -244,37 +279,46 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	{
 		name: "filter",
 		builtin: new BuiltInObject((obj) => {
-			const { args, bytecode, globals } = assertEnvironment(obj);
+			const { args, bytecode, span, globals } = assertEnvironment(obj);
 			if (args.length < 2) {
-				return new ErrorObject(
+				throw new ErrorObject(
 					`wrong number of arguments. got=${args.length}, want=2`,
+					span,
 				);
 			}
 			const arr = args[0] as Maybe<ArrayObject>;
 			const closure = args[1] as Maybe<ClosureObject>;
 			const callback = closure?.fn;
 			if (arr?.type() !== ObjectType.ARRAY_OBJ) {
-				return new ErrorObject(
-					`'filter function only accepts an array. got ${arr?.type()}`,
+				throw new ErrorObject(
+					`'filter function only accepts an array. got ${arr?.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			if (callback?.type() !== ObjectType.COMPILED_FUNCTION_OBJ) {
-				return new ErrorObject(
-					`'filter' second parameter must be a function. got ${arr?.type()}`,
+				throw new ErrorObject(
+					`'filter' second parameter must be a function. got ${closure?.type().toLowerCase()}`,
+					span?.argSpans?.[1],
 				);
 			}
 			const filtered: Maybe<InternalObject>[] = [];
 			const instructions = replaceReturnWithPop(callback.instructions);
 
 			for (const [index, el] of arr.elements.entries()) {
-				const vm2 = newVMForBuiltins(instructions, bytecode.constants, globals);
+				const vm2 = newVMForBuiltins(
+					instructions,
+					bytecode.constants,
+					bytecode.spanMap,
+					globals,
+				);
 				vm2.push(el);
 				vm2.push(new IntegerObject(index));
 				vm2.run();
 				const res = vm2.lastPoppedElement();
 				if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
-					return new ErrorObject(
-						`callback must evaluate to a boolean value. got ${res?.type()}`,
+					throw new ErrorObject(
+						`callback must evaluate to a boolean value. got ${res?.type().toLowerCase()}`,
+						span.argSpans?.[1],
 					);
 				}
 				if (res === TRUE_OBJ) {
@@ -286,13 +330,20 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 	{
 		name: "set",
-		builtin: new BuiltInObject(({ args }) => {
+		builtin: new BuiltInObject(({ args, span }) => {
+			if (args.length < 2) {
+				throw new ErrorObject(
+					`wrong number of arguments. got=${args.length}, want=3`,
+					span,
+				);
+			}
 			const hashmap = args[0] as HashObject;
 			const key = args[1] as Maybe<InternalObject>;
 			const value = args[2] as Maybe<InternalObject>;
 			if (!(hashmap instanceof HashObject)) {
-				return new ErrorObject(
-					`set's first argument must be a hashmap, got ${args[0]?.type()}`,
+				throw new ErrorObject(
+					`set's first argument must be a hashmap, got ${args[0]?.type().toLowerCase()}`,
+					span.argSpans?.[0],
 				);
 			}
 			if (
@@ -302,7 +353,10 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 					key instanceof StringObject
 				)
 			) {
-				return new ErrorObject("not a valid hash key");
+				throw new ErrorObject(
+					`not a valid hash key: ${key?.type().toLowerCase()}`,
+					span.argSpans?.[1],
+				);
 			}
 			hashmap.pairs.set(key.value, { key, value });
 			return NULL_OBJ;
@@ -325,6 +379,7 @@ function assertEnvironment(
 				bytecode: Bytecode;
 				globals: Maybe<InternalObject>[];
 				args: Maybe<InternalObject>[];
+				span: Span;
 		  }
 		| { env: "interpreter"; args: Maybe<InternalObject>[] },
 ) {
@@ -337,7 +392,8 @@ function assertEnvironment(
 function newVMForBuiltins(
 	instructions: Instructions,
 	constants: Maybe<InternalObject>[],
+	spanMap: Map<number, Span>,
 	globals: Maybe<InternalObject>[],
 ) {
-	return new VM(new Bytecode(instructions, constants), globals);
+	return new VM(new Bytecode(instructions, constants, spanMap), globals);
 }

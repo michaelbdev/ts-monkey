@@ -53,9 +53,20 @@ export async function repl() {
 				continue;
 			}
 			const vm = new VM(compiler.bytecode(), globals);
-			vm.run();
+			try {
+				vm.run();
+			} catch (e) {
+				if (e instanceof ErrorObject) {
+					reportError(e, line);
+					continue;
+				}
+			}
 			if (values.bytecode) {
 				console.log(stringify(compiler.bytecode().instructions));
+			}
+			if (vm.lastPoppedElement() instanceof ErrorObject) {
+				reportError(vm.lastPoppedElement() as ErrorObject, line);
+				continue;
 			}
 			console.log(vm.lastPoppedElement()?.inspect());
 		} else {
@@ -71,8 +82,6 @@ export async function repl() {
 
 		if (values.ast) {
 			console.dir(program.statements[0], { depth: null });
-			const span = program.statements[0].span;
-			console.log(line.slice(span?.start, span.end));
 		}
 		prompt();
 	}

@@ -1002,10 +1002,10 @@ describe("compiler", () => {
 		const compiler = new Compiler();
 		expect(compiler.scopeIndex).toBe(0);
 		const globalSymbolTable = compiler.symbolTable;
-		compiler.emit(OpCodes.OpMult);
+		compiler.emit(OpCodes.OpMult, undefined);
 		compiler.enterScope();
 		expect(compiler.scopeIndex).toBe(1);
-		compiler.emit(OpCodes.OpSub);
+		compiler.emit(OpCodes.OpSub, undefined);
 		expect(compiler.scopes[compiler.scopeIndex].instructions).toHaveLength(1);
 		expect(compiler.scopes[compiler.scopeIndex].lastInstruction?.opcode).toBe(
 			OpCodes.OpSub,
@@ -1015,7 +1015,7 @@ describe("compiler", () => {
 		expect(compiler.symbolTable).toBe(globalSymbolTable);
 
 		expect(compiler.scopeIndex).toBe(0);
-		compiler.emit(OpCodes.OpAdd);
+		compiler.emit(OpCodes.OpAdd, undefined);
 		expect(compiler.scopes[compiler.scopeIndex].instructions).toHaveLength(2);
 		expect(compiler.scopes[compiler.scopeIndex].lastInstruction?.opcode).toBe(
 			OpCodes.OpAdd,

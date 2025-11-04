@@ -116,6 +116,7 @@ export type BuiltinFunction = (
 				bytecode: Bytecode;
 				globals: Maybe<InternalObject>[];
 				args: Maybe<InternalObject>[];
+				span: Span;
 		  }
 		| {
 				env: "interpreter";

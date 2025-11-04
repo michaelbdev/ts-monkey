@@ -69,6 +69,13 @@ export function lookupIdentifier(identifer: string) {
 export type Span = {
 	start: number;
 	end: number;
+	// all below are for vm, since we don't have access to AST after compilation
+	argSpans?: Span[];
+	fnSpan?: Span;
+	indexSpan?: Span;
+	keySpans?: Span[];
+	rhsSpan?: Span;
+	operatorSpan?: Span;
 };
 export type Token = {
 	type: TokenType;
