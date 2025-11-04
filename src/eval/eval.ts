@@ -432,15 +432,22 @@ const evalIndexExpression = (
 	left: Maybe<InternalObject>,
 	index: Maybe<InternalObject>,
 ) => {
-	if (left instanceof ArrayObject && index?.type() === ObjectType.INTEGER_OBJ) {
+	if (
+		(left instanceof ArrayObject || left instanceof StringObject) &&
+		index?.type() !== ObjectType.INTEGER_OBJ
+	) {
+		return new ErrorObject(
+			`${index?.type().toLowerCase()} cannot be used to index ${left.type().toLowerCase()}`,
+			node.index?.span,
+		);
+	}
+	if (left instanceof ArrayObject) {
 		return evalArrayIndexExpression(left, index as IntegerObject);
 	}
-	if (
-		left instanceof StringObject &&
-		index?.type() === ObjectType.INTEGER_OBJ
-	) {
+	if (left instanceof StringObject) {
 		return evalStringIndexExpression(left, index as IntegerObject);
 	}
+
 	if (left instanceof HashObject) {
 		return evalHashIndexExpression(node, left, index);
 	}
