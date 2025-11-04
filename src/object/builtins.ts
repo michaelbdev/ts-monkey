@@ -310,9 +310,6 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	},
 ];
 
-export function getBuiltinByName(name: string) {
-	return builtins.find((b) => b.name === name)?.builtin;
-}
 function replaceReturnWithPop(a: Uint8Array) {
 	const noReturn = a.slice(0, a.length - 1);
 	const newArr = new Uint8Array(noReturn.length + 1);

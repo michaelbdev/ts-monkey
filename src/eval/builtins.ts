@@ -1,26 +1,149 @@
-import { getBuiltinByName } from "../object/builtins";
 import {
 	ArrayObject,
+	BooleanObject,
 	BuiltInObject,
 	ErrorObject,
 	type FunctionObject,
+	HashObject,
 	IntegerObject,
 	type InternalObject,
 	NULL_OBJ,
 	ObjectType,
+	StringObject,
 	TRUE_OBJ,
 } from "../object/object";
 import type { Maybe } from "../utils/types";
 import { applyFunction } from "./eval";
 
-// the implementations of the first 5 are the same so we share them, but all functions with callbacks need  their own implementation specific to the env they are run e.g interpreter or vm
 export const builtins: Record<string, BuiltInObject> = {
-	len: getBuiltinByName("len")!,
-	first: getBuiltinByName("first")!,
-	last: getBuiltinByName("last")!,
-	rest: getBuiltinByName("rest")!,
-	push: getBuiltinByName("push")!,
-	set: getBuiltinByName("set")!,
+	len: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
+		if (args.length !== 1) {
+			return new ErrorObject(
+				`wrong number of arguments. got=${args.length}, want=1`,
+				span,
+			);
+		}
+		const arg = args[0];
+		switch (arg?.type()) {
+			case ObjectType.STRING_OBJ:
+				return new IntegerObject(arg!.inspect().length);
+
+			case ObjectType.ARRAY_OBJ:
+				return new IntegerObject((arg as ArrayObject).elements.length);
+			default:
+				return new ErrorObject(
+					`argument to 'len' not supported, got ${args[0]!.type()}`,
+					argSpans[0],
+				);
+		}
+	}),
+
+	first: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
+		if (args.length !== 1) {
+			return new ErrorObject(
+				`wrong number of arguments. got=${args.length}, want=1`,
+				span,
+			);
+		}
+		const arg = args[0] as ArrayObject;
+		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
+			return new ErrorObject(
+				`'first' function only accepts an array, got: ${arg.type()}`,
+				argSpans[0],
+			);
+		}
+		return arg.elements[0] || NULL_OBJ;
+	}),
+
+	last: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
+		if (args.length !== 1) {
+			return new ErrorObject(
+				`wrong number of arguments. got=${args.length}, want=1`,
+				span,
+			);
+		}
+		const arg = args[0] as ArrayObject;
+		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
+			return new ErrorObject(
+				`'last' function only accepts an array, got: ${arg.type()}`,
+				argSpans[0],
+			);
+		}
+		return arg.elements.at(-1) || NULL_OBJ;
+	}),
+	rest: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
+		if (args.length !== 1) {
+			return new ErrorObject(
+				`wrong number of arguments. got=${args.length}, want=1`,
+				span,
+			);
+		}
+		const arg = args[0] as ArrayObject;
+		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
+			return new ErrorObject(
+				`'rest' function only accepts an array, got: ${arg.type()}`,
+				argSpans[0],
+			);
+		}
+		return new ArrayObject(arg.elements.slice(1));
+	}),
+	push: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
+		if (args.length !== 2) {
+			return new ErrorObject(
+				`wrong number of arguments. got=${args.length}, want=2`,
+				span,
+			);
+		}
+		const arg = args[0] as ArrayObject;
+		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
+			return new ErrorObject(
+				`'push' function only accepts an array, got: ${arg.type()}`,
+				argSpans[0],
+			);
+		}
+		const clone = arg.elements.slice();
+		clone.push(args[1]);
+
+		return new ArrayObject(clone);
+	}),
+	set: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, argSpans } = obj;
+		const hashmap = args[0] as HashObject;
+		const key = args[1] as Maybe<InternalObject>;
+		const value = args[2] as Maybe<InternalObject>;
+		if (!(hashmap instanceof HashObject)) {
+			return new ErrorObject(
+				`set's first argument must be a hashmap, got ${args[0]?.type().toLowerCase()}`,
+				argSpans[0],
+			);
+		}
+		if (
+			!(
+				key instanceof IntegerObject ||
+				key instanceof BooleanObject ||
+				key instanceof StringObject
+			)
+		) {
+			return new ErrorObject(
+				`not a valid hash key: ${key?.type().toLowerCase()}`,
+				argSpans[1],
+			);
+		}
+		hashmap.pairs.set(key.value, { key, value });
+		return NULL_OBJ;
+	}),
+
 	map: new BuiltInObject((obj) => {
 		if (obj.env !== "interpreter") return;
 		const { args, span, argSpans } = obj;
@@ -98,10 +221,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		}
 		return NULL_OBJ;
 	}),
-	reduce: new BuiltInObject(({ args }) => {
+	reduce: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
 		if (args.length < 2) {
 			return new ErrorObject(
 				`wrong number of arguments. got=${args.length}, want=2|3`,
+				span,
 			);
 		}
 		const arg = args[0] as Maybe<ArrayObject>;
@@ -111,11 +237,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
 			return new ErrorObject(
 				`'reduce' function only accepts an array, got: ${arg?.type()}`,
+				argSpans[0],
 			);
 		}
 		if (arg2?.type() !== ObjectType.FUNCTION_OBJ) {
 			return new ErrorObject(
 				`'reduce' second parameter must be a function, got: ${arg2?.type()}`,
+				argSpans[1],
 			);
 		}
 		const copy = arg.elements.slice();
@@ -126,10 +254,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		}
 		return result;
 	}),
-	filter: new BuiltInObject(({ args }) => {
+	filter: new BuiltInObject((obj) => {
+		if (obj.env !== "interpreter") return;
+		const { args, span, argSpans } = obj;
 		if (args.length < 2) {
 			return new ErrorObject(
 				`wrong number of arguments. got=${args.length}, want=2`,
+				span,
 			);
 		}
 		const arg = args[0] as Maybe<ArrayObject>;
@@ -137,11 +268,13 @@ export const builtins: Record<string, BuiltInObject> = {
 		if (arg?.type() !== ObjectType.ARRAY_OBJ) {
 			return new ErrorObject(
 				`'filter function only accepts an array. got ${arg?.type()}`,
+				argSpans[0],
 			);
 		}
 		if (arg2?.type() !== ObjectType.FUNCTION_OBJ) {
 			return new ErrorObject(
 				`'filter' second parameter must be a function. got ${arg?.type()}`,
+				argSpans[1],
 			);
 		}
 		const filtered: Maybe<InternalObject>[] = [];
@@ -151,6 +284,7 @@ export const builtins: Record<string, BuiltInObject> = {
 			if (res?.type() !== ObjectType.BOOLEAN_OBJ) {
 				return new ErrorObject(
 					`callback must evaluate to a boolean value. got ${res?.type()}`,
+					arg2.body.span,
 				);
 			}
 			if (res === TRUE_OBJ) {
@@ -159,5 +293,8 @@ export const builtins: Record<string, BuiltInObject> = {
 		}
 		return new ArrayObject(filtered);
 	}),
-	puts: getBuiltinByName("puts")!,
+	puts: new BuiltInObject(({ args }) => {
+		args.forEach((arg) => console.log(arg?.inspect()));
+		return NULL_OBJ;
+	}),
 };
