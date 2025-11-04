@@ -156,6 +156,7 @@ export class HashObject implements InternalObject {
 	}
 	inspect(): string {
 		return `{${Array.from(this.pairs.values())
+			.reverse()
 			.map(({ key, value }) => `${key.inspect()}:${value?.inspect()}`)
 			.join(", ")}}`;
 	}
