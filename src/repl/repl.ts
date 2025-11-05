@@ -1,3 +1,4 @@
+import readline from "node:readline";
 import { parseArgs } from "node:util";
 import { stringify } from "../code/code";
 import { Compiler } from "../compiler/compiler";
@@ -9,6 +10,11 @@ import { ErrorObject, type InternalObject } from "../object/object";
 import { Parser } from "../parser/parser";
 import { VM } from "../vm/vm";
 export async function repl() {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+		terminal: true,
+	});
 	const env = new Environment();
 	const { values } = parseArgs({
 		args: Bun.argv,
@@ -33,7 +39,7 @@ export async function repl() {
 	const constants: InternalObject[] = [];
 	const globals: InternalObject[] = [];
 	const symbolTable = new SymbolTable();
-	for await (const line of console) {
+	for await (const line of rl) {
 		const lexer = new Lexer(line);
 		const parser = new Parser(lexer);
 		const program = parser.parseProgram();
