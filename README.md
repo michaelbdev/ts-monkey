@@ -6,6 +6,7 @@ ts-monkey is a typescript implementation of both a tree-walking interpreter and 
 ## Extensions
 My monkey implementation has been extended to support the following new features:
 
+- Friendly error messages that display the offending line of code and underline the exact location of the error.
 - Ability to run monkey files (.mo extension)
 - comments (both single and multi line) ```// a comment!```  ```/* a multiline comment */ ```
 
