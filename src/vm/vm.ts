@@ -140,7 +140,7 @@ export class VM {
 					} else if (obj instanceof StringObject) {
 						this.indexString(obj, idx);
 					} else {
-						this.error(`${obj?.type()} is not indexable`);
+						this.error(`${obj?.type().toLowerCase()} is not indexable`);
 					}
 					break;
 				}

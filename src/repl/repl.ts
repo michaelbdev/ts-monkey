@@ -110,7 +110,6 @@ const MONKEY_FACE = `
 
 export function reportError(err: ErrorObject, source: string) {
 	console.error(`\nError: ${err.msg}`);
-
 	if (!err.span) return;
 
 	const { line, col } = indexToLineCol(source, err.span.start);
@@ -119,8 +118,9 @@ export function reportError(err: ErrorObject, source: string) {
 	const underlineLength = Math.max(1, err.span.end - err.span.start);
 	const underline = " ".repeat(col - 1) + "^".repeat(underlineLength);
 
-	console.error(`${line} | ${lineText}`);
-	console.error(`    ${underline}`);
+	const prefix = `${line}:${col} | `;
+	console.error(prefix + lineText);
+	console.error(" ".repeat(prefix.length) + underline);
 	console.error();
 }
 function indexToLineCol(source: string, index: number) {

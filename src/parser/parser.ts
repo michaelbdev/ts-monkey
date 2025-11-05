@@ -141,7 +141,6 @@ export class Parser {
 		}
 		statement.span = {
 			start: statement.token.span.start,
-			// TODO: fix nullability
 			end: statement.value!.span!.end,
 		};
 		return statement;

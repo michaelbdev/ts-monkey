@@ -147,7 +147,7 @@ describe("eval", () => {
 			},
 			{
 				input: "-true",
-				expected: "unknown operator: -BOOLEAN",
+				expected: "cannot negate boolean",
 			},
 			{
 				input: "true + false;",

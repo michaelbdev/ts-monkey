@@ -196,7 +196,10 @@ const evalMinusOperatorExpression = (
 	span: Span,
 ) => {
 	if (right?.type() !== ObjectType.INTEGER_OBJ) {
-		return new ErrorObject(`unknown operator: -${right?.type()}`, span);
+		return new ErrorObject(
+			`cannot negate ${right?.type().toLowerCase()}`,
+			span,
+		);
 	}
 
 	const value = (right as IntegerObject).value;

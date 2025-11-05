@@ -277,11 +277,11 @@ describe("vm", () => {
 		runVmTests([
 			{
 				input: "true[0]",
-				expected: new ErrorObject("BOOLEAN is not indexable"),
+				expected: new ErrorObject("boolean is not indexable"),
 			},
 			{
 				input: "1[0]",
-				expected: new ErrorObject("INTEGER is not indexable"),
+				expected: new ErrorObject("integer is not indexable"),
 			},
 		]);
 	});
