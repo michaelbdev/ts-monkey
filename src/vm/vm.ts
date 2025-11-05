@@ -346,7 +346,7 @@ export class VM {
 		if (n1?.type() !== n2?.type()) {
 			return this.error(
 				`type mismatch: ${n1?.type()} ${definitionsMap[op].char} ${n2?.type()}`,
-				span?.operatorSpan,
+				span,
 			);
 		}
 
@@ -403,7 +403,7 @@ export class VM {
 		if (left?.type() !== right?.type()) {
 			return this.error(
 				`type mismatch: ${left?.type()} ${definitionsMap[op].char} ${right?.type()}`,
-				span?.operatorSpan,
+				span,
 			);
 		}
 		if (left instanceof IntegerObject && right instanceof IntegerObject) {
