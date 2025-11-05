@@ -147,7 +147,7 @@ describe("eval", () => {
 			},
 			{
 				input: "-true",
-				expected: "unknown operator: -BOOLEAN",
+				expected: "cannot negate boolean",
 			},
 			{
 				input: "true + false;",
@@ -205,6 +205,10 @@ describe("eval", () => {
 			{
 				input: "1%0",
 				expected: "cannot divide by 0",
+			},
+			{
+				input: `let a = 1; let a = "hello"`,
+				expected: `variable "a" has already been declared`,
 			},
 		];
 		for (const { input, expected } of tests) {
@@ -721,6 +725,40 @@ describe("eval", () => {
 			const evaluated = testEval(input) as ErrorObject;
 			expect(evaluated.msg).toBe(expected);
 		}
+	});
+	describe("spans", () => {
+		it("should attach span for type mismatch errors", () => {
+			const input = "1 + true";
+			const result = testEval(input) as ErrorObject;
+			expect(result).toBeInstanceOf(ErrorObject);
+			expect(result.msg).toContain("type mismatch");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe(
+				"1 + true",
+			);
+		});
+
+		it("should attach span for identifier not found", () => {
+			const input = "foo + 1";
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("identifier not found");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe("foo");
+		});
+
+		it("should attach span for builtin arg type errors", () => {
+			const input = `map({"a":999}, fn x => x)`;
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("only accepts an array");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe(
+				`{"a":999}`,
+			);
+		});
+
+		it("should attach span for redeclared variable", () => {
+			const input = "let a = 1; let a = 2;";
+			const result = testEval(input) as ErrorObject;
+			expect(result.msg).toContain("already been declared");
+			expect(input.slice(result.span!.start, result.span!.end)).toBe("a");
+		});
 	});
 });
 

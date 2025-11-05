@@ -5,8 +5,9 @@ import { Compiler } from "./compiler/compiler";
 import { Environment } from "./eval/environment";
 import { evaluate } from "./eval/eval";
 import { Lexer } from "./lexer/lexer";
+import { ErrorObject } from "./object/object";
 import { Parser } from "./parser/parser";
-import { repl } from "./repl/repl";
+import { repl, reportError } from "./repl/repl";
 import { VM } from "./vm/vm";
 (async () => {
 	if (Bun.argv.includes("--repl")) {
@@ -40,15 +41,27 @@ async function runFiles() {
 				const printOps = Bun.argv.includes("--bytecode");
 				if (Bun.argv.includes("-c")) {
 					const compiler = new Compiler();
-					compiler.compile(program);
-					const vm = new VM(compiler.bytecode());
-					vm.run();
+					try {
+						compiler.compile(program);
+					} catch (e) {
+						if (e instanceof ErrorObject) {
+							reportError(e, res);
+							return;
+						}
+					}
 					if (printOps) {
 						console.log(stringify(compiler.bytecode().instructions));
 					}
+					const vm = new VM(compiler.bytecode());
+					vm.run();
 					console.log(vm.lastPoppedElement()?.inspect());
 				} else {
-					console.log(file, evaluate(program, new Environment())?.inspect());
+					const evaluated = evaluate(program, new Environment());
+					if (evaluated instanceof ErrorObject) {
+						reportError(evaluated, res);
+					} else {
+						console.log(file, evaluated?.inspect());
+					}
 				}
 				if (printAST) console.log(program);
 			});

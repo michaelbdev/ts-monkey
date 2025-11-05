@@ -3,6 +3,7 @@ import { type Instructions, OpCodes, make, stringify } from "../code/code";
 import { Lexer } from "../lexer/lexer";
 import {
 	CompiledFunctionObject,
+	ErrorObject,
 	IntegerObject,
 	type InternalObject,
 	StringObject,
@@ -1001,10 +1002,10 @@ describe("compiler", () => {
 		const compiler = new Compiler();
 		expect(compiler.scopeIndex).toBe(0);
 		const globalSymbolTable = compiler.symbolTable;
-		compiler.emit(OpCodes.OpMult);
+		compiler.emit(OpCodes.OpMult, undefined);
 		compiler.enterScope();
 		expect(compiler.scopeIndex).toBe(1);
-		compiler.emit(OpCodes.OpSub);
+		compiler.emit(OpCodes.OpSub, undefined);
 		expect(compiler.scopes[compiler.scopeIndex].instructions).toHaveLength(1);
 		expect(compiler.scopes[compiler.scopeIndex].lastInstruction?.opcode).toBe(
 			OpCodes.OpSub,
@@ -1014,7 +1015,7 @@ describe("compiler", () => {
 		expect(compiler.symbolTable).toBe(globalSymbolTable);
 
 		expect(compiler.scopeIndex).toBe(0);
-		compiler.emit(OpCodes.OpAdd);
+		compiler.emit(OpCodes.OpAdd, undefined);
 		expect(compiler.scopes[compiler.scopeIndex].instructions).toHaveLength(2);
 		expect(compiler.scopes[compiler.scopeIndex].lastInstruction?.opcode).toBe(
 			OpCodes.OpAdd,
@@ -1022,6 +1023,50 @@ describe("compiler", () => {
 		expect(
 			compiler.scopes[compiler.scopeIndex].previousInstruction?.opcode,
 		).toBe(OpCodes.OpMult);
+	});
+	it("should fail to compile for undeclared variable", () => {
+		const input = "let someVar = undeclared_var";
+		const program = lexAndParse(input);
+		expect.assertions(3);
+		try {
+			new Compiler().compile(program);
+		} catch (e) {
+			const error = e as ErrorObject;
+			expect(e).toBeInstanceOf(ErrorObject);
+			expect(error.msg).toMatch(/identifier not found: undeclared_var/);
+			expect(input.slice(error.span!.start, error.span!.end)).toBe(
+				"undeclared_var",
+			);
+		}
+	});
+
+	it("should fail to compile for redeclared variable", () => {
+		const tests = [
+			{
+				input: "let someVar= 1; let anotherVar=2; let someVar= [1,2,3,4,5]",
+				expected: /variable "someVar" has already been declared/,
+				expectedSpan: "someVar",
+			},
+			{
+				input: "if(true){let a =1; let a =2;}",
+				expected: /variable "a" has already been declared/,
+				expectedSpan: "a",
+			},
+		];
+		expect.assertions(tests.length * 3);
+		for (const { input, expected, expectedSpan } of tests) {
+			const program = lexAndParse(input);
+			try {
+				new Compiler().compile(program);
+			} catch (e) {
+				const error = e as ErrorObject;
+				expect(e).toBeInstanceOf(ErrorObject);
+				expect(error.msg).toMatch(expected);
+				expect(input.slice(error.span!.start, error.span!.end)).toBe(
+					expectedSpan,
+				);
+			}
+		}
 	});
 });
 const lexAndParse = (input: string) =>

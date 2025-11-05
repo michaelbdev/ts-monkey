@@ -11,6 +11,9 @@ export class Environment {
 		}
 		return value;
 	}
+	hasInSameEnv(key: string) {
+		return this.store.get(key);
+	}
 	set(key: string, value: Maybe<InternalObject>) {
 		return this.store.set(key, value);
 	}

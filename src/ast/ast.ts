@@ -1,8 +1,9 @@
-import type { Token } from "../token/token";
+import type { Span, Token } from "../token/token";
 import type { Maybe } from "../utils/types";
 export interface Node {
 	tokenLiteral(): string;
 	string(): string;
+	span?: Span;
 }
 export interface Statement extends Node {
 	statementNode(): void;
@@ -25,6 +26,7 @@ export class Program implements Node {
 }
 
 export class LetStatement implements Statement {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public name?: Identifier | null,
@@ -40,6 +42,7 @@ export class LetStatement implements Statement {
 }
 
 export class Identifier implements Expression {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public value: string,
@@ -54,6 +57,7 @@ export class Identifier implements Expression {
 }
 
 export class ReturnStatement implements Statement {
+	public span?: Span | undefined;
 	public value: Maybe<Expression> = null;
 	constructor(public token: Token) {}
 	statementNode(): void {}
@@ -66,6 +70,7 @@ export class ReturnStatement implements Statement {
 }
 
 export class ExpressionStatement implements Statement {
+	public span?: Span | undefined;
 	public expression: Maybe<Expression> = null;
 
 	constructor(public token: Token) {}
@@ -79,6 +84,7 @@ export class ExpressionStatement implements Statement {
 }
 
 export class IntegerLiteral implements Expression {
+	public span?: Span | undefined;
 	public value: number | null = null;
 	constructor(public token: Token) {}
 	expressionNode(): void {}
@@ -91,6 +97,7 @@ export class IntegerLiteral implements Expression {
 }
 
 export class PrefixExpression implements Expression {
+	public span?: Span | undefined;
 	public rightExpression: Maybe<Expression> = null;
 	constructor(
 		public token: Token,
@@ -106,6 +113,7 @@ export class PrefixExpression implements Expression {
 }
 
 export class InfixExpression implements Expression {
+	public span?: Span | undefined;
 	public rightExpr: Maybe<Expression> = null;
 	constructor(
 		public token: Token,
@@ -121,6 +129,7 @@ export class InfixExpression implements Expression {
 	}
 }
 export class BooleanLiteral implements Expression {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public value: boolean,
@@ -135,6 +144,7 @@ export class BooleanLiteral implements Expression {
 }
 
 export class IfExpression implements Expression {
+	public span?: Span | undefined;
 	public condition: Maybe<Expression> = null;
 	public consequence: BlockStatement | null = null;
 	public alternative: BlockStatement | null = null;
@@ -149,6 +159,7 @@ export class IfExpression implements Expression {
 	}
 }
 export class BlockStatement implements Statement {
+	public span?: Span | undefined;
 	public statements: Statement[] = [];
 	constructor(public token: Token) {}
 	statementNode(): void {}
@@ -160,6 +171,7 @@ export class BlockStatement implements Statement {
 	}
 }
 export class FunctionLiteral implements Expression {
+	public span?: Span | undefined;
 	public parameters: Maybe<Identifier[]> = null;
 	public body: Maybe<Expression | BlockStatement> = null;
 	public isArrow = false;
@@ -178,6 +190,7 @@ export class FunctionLiteral implements Expression {
 	}
 }
 export class CallExpression implements Expression {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public func: Expression | null,
@@ -192,6 +205,7 @@ export class CallExpression implements Expression {
 	}
 }
 export class StringLiteral implements Expression {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public value: string,
@@ -205,6 +219,7 @@ export class StringLiteral implements Expression {
 	}
 }
 export class ArrayLiteral implements Expression {
+	public span?: Span | undefined;
 	constructor(
 		public token: Token,
 		public elements: Expression[] | null,
@@ -219,6 +234,7 @@ export class ArrayLiteral implements Expression {
 	}
 }
 export class IndexExpression implements Expression {
+	public span?: Span | undefined;
 	public index: Maybe<Expression> = null;
 	constructor(
 		public token: Token,
@@ -234,6 +250,7 @@ export class IndexExpression implements Expression {
 }
 
 export class HashLiteral implements Expression {
+	public span?: Span | undefined;
 	public pairs: Map<Expression, Expression> | null = null;
 
 	constructor(public token: Token) {}
@@ -248,6 +265,7 @@ export class HashLiteral implements Expression {
 	}
 }
 export class ForStatement implements Statement {
+	public span?: Span | undefined;
 	public currItem: Maybe<Identifier> = null;
 	public currIndex: Maybe<Identifier> = null;
 	public iterable: Maybe<Expression>;

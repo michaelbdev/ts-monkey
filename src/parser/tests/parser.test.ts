@@ -704,6 +704,188 @@ describe("parser", () => {
 			expect(statement.body).toBeInstanceOf(BlockStatement);
 		}
 	});
+
+	describe("spans", () => {
+		it("should set span correctly for let statements", () => {
+			const input = "let x = 5;";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+			const stmt = program.statements[0] as LetStatement;
+
+			const { start, end } = stmt.span!;
+			expect(input.slice(start, end)).toBe("let x = 5");
+		});
+
+		it("should set span correctly for infix expressions", () => {
+			const input = "1 + 2 * 3;";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+			const stmt = program.statements[0] as ExpressionStatement;
+			const expr = stmt.expression as InfixExpression;
+
+			const { start, end } = expr.span!;
+			expect(input.slice(start, end)).toBe("1 + 2 * 3");
+		});
+
+		it("should set span correctly for call expressions", () => {
+			const input = "add(1, 2);";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+			const stmt = program.statements[0] as ExpressionStatement;
+			const expr = stmt.expression as CallExpression;
+
+			const { start, end } = expr.span!;
+			expect(input.slice(start, end)).toBe("add(1, 2)");
+		});
+
+		it("should set span correctly for if expressions with else", () => {
+			const input = "if (x < y) { x } else { y }";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+			const stmt = program.statements[0] as ExpressionStatement;
+			const expr = stmt.expression as IfExpression;
+
+			const { start, end } = expr.span!;
+			expect(input.slice(start, end)).toBe("if (x < y) { x } else { y }");
+		});
+
+		it("should set span correctly for nested array and index expressions", () => {
+			const input = "[1, 2, [3, 4]][1]";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+			const stmt = program.statements[0] as ExpressionStatement;
+			const expr = stmt.expression as IndexExpression;
+
+			const { start, end } = expr.span!;
+			expect(input.slice(start, end)).toBe("[1, 2, [3, 4]][1]");
+		});
+		it("sets spans correctly for return statements", () => {
+			const input = "return x + 1;";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+
+			const stmt = program.statements[0] as ReturnStatement;
+			const { start, end } = stmt.span!;
+			expect(input.slice(start, end)).toBe("return x + 1");
+
+			const value = stmt.value!;
+			expect(input.slice(value.span!.start, value.span!.end)).toBe("x + 1");
+		});
+		it("sets spans correctly for for-in statements", () => {
+			const input = "for(item, i in arr) { let x = 1; }";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+
+			const stmt = program.statements[0] as ForStatement;
+			const { start, end } = stmt.span!;
+			expect(input.slice(start, end)).toBe(
+				"for(item, i in arr) { let x = 1; }",
+			);
+
+			// granular spans
+			expect(
+				input.slice(stmt.currItem!.span!.start, stmt.currItem!.span!.end),
+			).toBe("item");
+			expect(
+				input.slice(stmt.currIndex!.span!.start, stmt.currIndex!.span!.end),
+			).toBe("i");
+			expect(
+				input.slice(stmt.iterable!.span!.start, stmt.iterable!.span!.end),
+			).toBe("arr");
+			expect(input.slice(stmt.body!.span!.start, stmt.body!.span!.end)).toBe(
+				"{ let x = 1; }",
+			);
+		});
+	});
+	describe("granular spans", () => {
+		it("tracks spans for function parameters and body", () => {
+			const input = "fn(x, y) { x + y }";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			const expr = (program.statements[0] as ExpressionStatement)
+				.expression as FunctionLiteral;
+
+			// function itself
+			expect(input.slice(expr.span!.start, expr.span!.end)).toBe(
+				"fn(x, y) { x + y }",
+			);
+
+			// parameters
+			const [x, yParam] = expr.parameters!;
+			expect(input.slice(x.span!.start, x.span!.end)).toBe("x");
+			expect(input.slice(yParam.span!.start, yParam.span!.end)).toBe("y");
+
+			// body
+			const body = expr.body as BlockStatement;
+			expect(input.slice(body.span!.start, body.span!.end)).toBe("{ x + y }");
+		});
+
+		it("tracks spans for index expressions", () => {
+			const input = "arr[1 + 2]";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			const expr = (program.statements[0] as ExpressionStatement)
+				.expression as IndexExpression;
+
+			expect(input.slice(expr.span!.start, expr.span!.end)).toBe("arr[1 + 2]");
+			expect(input.slice(expr.left.span!.start, expr.left.span!.end)).toBe(
+				"arr",
+			);
+			expect(input.slice(expr.index!.span!.start, expr.index!.span!.end)).toBe(
+				"1 + 2",
+			);
+		});
+
+		it("tracks spans for hash literal keys and values", () => {
+			const input = `{"a": 1 + 2, "b": 3}`;
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			const expr = (program.statements[0] as ExpressionStatement)
+				.expression as HashLiteral;
+
+			expect(input.slice(expr.span!.start, expr.span!.end)).toBe(
+				`{"a": 1 + 2, "b": 3}`,
+			);
+
+			const entries = [...expr.pairs!.entries()];
+			const [firstKey, firstValue] = entries[0];
+			const [secondKey, secondValue] = entries[1];
+
+			expect(input.slice(firstKey.span!.start, firstKey.span!.end)).toBe(`"a"`);
+			expect(input.slice(firstValue.span!.start, firstValue.span!.end)).toBe(
+				"1 + 2",
+			);
+			expect(input.slice(secondKey.span!.start, secondKey.span!.end)).toBe(
+				`"b"`,
+			);
+			expect(input.slice(secondValue.span!.start, secondValue.span!.end)).toBe(
+				"3",
+			);
+		});
+
+		it("tracks spans for nested call arguments", () => {
+			const input = "add(1, mul(2, 3))";
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			const expr = (program.statements[0] as ExpressionStatement)
+				.expression as CallExpression;
+
+			expect(input.slice(expr.span!.start, expr.span!.end)).toBe(
+				"add(1, mul(2, 3))",
+			);
+
+			const [arg1, arg2] = expr.args!;
+			expect(input.slice(arg1.span!.start, arg1.span!.end)).toBe("1");
+			expect(input.slice(arg2.span!.start, arg2.span!.end)).toBe("mul(2, 3)");
+		});
+	});
 });
 
 function testIntegerLiteral(intLiteral: Expression | null, value: number) {

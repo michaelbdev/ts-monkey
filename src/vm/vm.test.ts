@@ -119,17 +119,68 @@ describe("vm", () => {
 			},
 		]);
 	});
-	it("should execute if expressions", () => {
-		runVmTests([
-			{ input: "if (true) { 10 }", expected: 10 },
-			{ input: "if (true) { 10 } else { 20 }", expected: 10 },
-			{ input: "if (false) { 10 } ", expected: null },
-			{ input: "if (false) { 10 } else { 20 } ", expected: 20 },
-			{ input: "if (1) { 10 }", expected: 10 },
-			{ input: "if (1 < 2) { 10 }", expected: 10 },
-			{ input: "if (1 < 2) { 10 } else { 20 }", expected: 10 },
-			{ input: "if (1 > 2) { 10 } else { 20 }", expected: 20 },
-		]);
+	describe("if expressions", () => {
+		it("should execute", () => {
+			runVmTests([
+				{ input: "if (true) { 10 }", expected: 10 },
+				{ input: "if (true) { 10 } else { 20 }", expected: 10 },
+				{ input: "if (false) { 10 } ", expected: null },
+				{ input: "if (false) { 10 } else { 20 } ", expected: 20 },
+				{ input: "if (1) { 10 }", expected: 10 },
+				{ input: "if (1 < 2) { 10 }", expected: 10 },
+				{ input: "if (1 < 2) { 10 } else { 20 }", expected: 10 },
+				{ input: "if (1 > 2) { 10 } else { 20 }", expected: 20 },
+			]);
+		});
+		it("should be block scoped", () => {
+			runVmTests([
+				{ input: "let a =1; if(true){let a = 2}; a", expected: 1 },
+				{
+					input: "let a = 1;if(false){}else{let a = [1,2,3,4,5]}; a",
+					expected: 1,
+				},
+				{
+					input: "let a =1; let b = if (true) { let a = 200;a }; b+a ",
+					expected: 201,
+				},
+
+				{
+					input:
+						"let x = 1; if (true) { let x = 2; if (true) { let x = 3 }; x }; x",
+					expected: 1,
+				},
+
+				{
+					input:
+						"let x = 5; let y = fn(){ if(true){let x = 50; return x}; return x; }; y(); x",
+					expected: 5,
+				},
+
+				{
+					input: "let x = 10; if(true){ let y = x + 1; let x = y * 2 }; x",
+					expected: 10,
+				},
+
+				{
+					input: "let x = fn(){ if(true){ let y = 42; return y }}; x()",
+					expected: 42,
+				},
+
+				{
+					input: "let f = fn(a){ if(true){ let a = 10;a }}; f(5)",
+					expected: 10,
+				},
+				{
+					input: "let f = fn(a){ if(true){ let a = 10 }  a}; f(5)",
+					expected: 5,
+				},
+
+				{
+					input: "let x = 1; if(true){ let x = x + 1; x};",
+					expected: 2,
+				},
+			]);
+		});
 	});
 	it("should execute let statements/identifiers", () => {
 		runVmTests([
@@ -194,11 +245,11 @@ describe("vm", () => {
 			runVmTests([
 				{
 					input: "{[1]:2}",
-					expected: new ErrorObject("cannot use ARRAY as hash key"),
+					expected: new ErrorObject("cannot use array as hash key"),
 				},
 				{
 					input: "{[1]:2, 5:10}",
-					expected: new ErrorObject("cannot use ARRAY as hash key"),
+					expected: new ErrorObject("cannot use array as hash key"),
 				},
 			]);
 		});
@@ -226,11 +277,11 @@ describe("vm", () => {
 		runVmTests([
 			{
 				input: "true[0]",
-				expected: new ErrorObject("BOOLEAN is not indexable"),
+				expected: new ErrorObject("boolean is not indexable"),
 			},
 			{
 				input: "1[0]",
-				expected: new ErrorObject("INTEGER is not indexable"),
+				expected: new ErrorObject("integer is not indexable"),
 			},
 		]);
 	});
@@ -401,10 +452,13 @@ describe("vm", () => {
 	});
 	it("should return error if a non function tries to be called", () => {
 		runVmTests([
-			{ input: "1()", expected: new ErrorObject("calling non function") },
+			{
+				input: "1()",
+				expected: new ErrorObject("1 is not a function, got type: integer"),
+			},
 			{
 				input: "let a = true; a()",
-				expected: new ErrorObject("calling non function"),
+				expected: new ErrorObject("true is not a function, got type: boolean"),
 			},
 		]);
 	});
@@ -417,13 +471,13 @@ describe("vm", () => {
 			{
 				input: "len(1)",
 				expected: new ErrorObject(
-					"argument to 'len' not supported, got INTEGER",
+					"argument to 'len' not supported, got integer",
 				),
 			},
 			{
 				input: "len(1)",
 				expected: new ErrorObject(
-					"argument to 'len' not supported, got INTEGER",
+					"argument to 'len' not supported, got integer",
 				),
 			},
 			{
@@ -440,7 +494,7 @@ describe("vm", () => {
 			{
 				input: "first(1)",
 				expected: new ErrorObject(
-					"'first' function only accepts an array, got: INTEGER",
+					"'first' function only accepts an array, got: integer",
 				),
 			},
 
@@ -449,7 +503,7 @@ describe("vm", () => {
 			{
 				input: "last(1)",
 				expected: new ErrorObject(
-					"'last' function only accepts an array, got: INTEGER",
+					"'last' function only accepts an array, got: integer",
 				),
 			},
 
@@ -543,18 +597,18 @@ describe("vm", () => {
 			{
 				input: ` set([],"b",2)`,
 				expected: new ErrorObject(
-					"set's first argument must be a hashmap, got ARRAY",
+					"set's first argument must be a hashmap, got array",
 				),
 			},
 			{
 				input: "set(1,1,1)",
 				expected: new ErrorObject(
-					"set's first argument must be a hashmap, got INTEGER",
+					"set's first argument must be a hashmap, got integer",
 				),
 			},
 			{
 				input: "set({},[],1)",
-				expected: new ErrorObject("not a valid hash key"),
+				expected: new ErrorObject("not a valid hash key: array"),
 			},
 		]);
 	});
@@ -651,9 +705,15 @@ const runVmTests = (
 		compiler.compile(program);
 		const bytecode = compiler.bytecode();
 		const vm = new VM(bytecode);
-		vm.run();
-		const stackElement = vm.lastPoppedElement();
-		testExpectedObject(stackElement!, expected);
+		try {
+			vm.run();
+			const stackElement = vm.lastPoppedElement();
+			testExpectedObject(stackElement!, expected);
+		} catch (e) {
+			if (e instanceof ErrorObject) {
+				testExpectedObject(e, expected);
+			}
+		}
 	}
 };
 

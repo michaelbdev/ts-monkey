@@ -2,6 +2,7 @@ import { BlockStatement, type Expression, type Identifier } from "../ast/ast";
 import type { Instructions } from "../code/code";
 import type { Bytecode } from "../compiler/compiler";
 import type { Environment } from "../eval/environment";
+import type { Span } from "../token/token";
 import type { Maybe } from "../utils/types";
 
 export interface InternalObject {
@@ -63,7 +64,10 @@ export class ReturnValueObject implements InternalObject {
 	}
 }
 export class ErrorObject implements InternalObject {
-	constructor(public msg: string) {}
+	constructor(
+		public msg: string,
+		public span?: Span,
+	) {}
 	type(): ObjectType {
 		return ObjectType.ERROR_OBJ;
 	}
@@ -112,8 +116,14 @@ export type BuiltinFunction = (
 				bytecode: Bytecode;
 				globals: Maybe<InternalObject>[];
 				args: Maybe<InternalObject>[];
+				span: Span;
 		  }
-		| { env: "interpreter"; args: Maybe<InternalObject>[] },
+		| {
+				env: "interpreter";
+				args: Maybe<InternalObject>[];
+				span: Span;
+				argSpans: (Span | undefined)[];
+		  },
 ) => Maybe<InternalObject>;
 export class BuiltInObject implements InternalObject {
 	constructor(public fn: BuiltinFunction) {}
@@ -147,6 +157,7 @@ export class HashObject implements InternalObject {
 	}
 	inspect(): string {
 		return `{${Array.from(this.pairs.values())
+			.reverse()
 			.map(({ key, value }) => `${key.inspect()}:${value?.inspect()}`)
 			.join(", ")}}`;
 	}

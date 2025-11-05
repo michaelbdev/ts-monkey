@@ -6,10 +6,21 @@ describe("ast", () => {
 		const program = new Program();
 		program.statements = [
 			new LetStatement(
-				{ type: TokenType.LET, literal: "let" },
-				new Identifier({ type: TokenType.IDENT, literal: "myVar" }, "myVar"),
+				{ type: TokenType.LET, literal: "let", span: { start: 0, end: 0 } },
 				new Identifier(
-					{ type: TokenType.IDENT, literal: "anotherVar" },
+					{
+						type: TokenType.IDENT,
+						literal: "myVar",
+						span: { start: 0, end: 0 },
+					},
+					"myVar",
+				),
+				new Identifier(
+					{
+						type: TokenType.IDENT,
+						literal: "anotherVar",
+						span: { start: 0, end: 0 },
+					},
 					"anotherVar",
 				),
 			),
