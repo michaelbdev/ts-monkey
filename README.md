@@ -23,7 +23,7 @@ My monkey implementation has been extended to support the following new features
   - find ```find(["hello", "world"], fn w => w=="hello")```
   - reduce ```reduce([1,2,3,4], fn(acc,curr) => acc+curr,100)```
   - filter ```filter([1,2,3,4], fn x => x%2==0)```
-  - set ```let map = { a: 1 }; set(map,"b",2); map[b] //2```
+  - set ```let map = { "a": 1 }; set(map,"b",2); map["b"] //2```
     
     
        
