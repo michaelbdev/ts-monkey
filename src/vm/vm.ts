@@ -284,7 +284,7 @@ export class VM {
 			span.fnSpan,
 		);
 	}
-	private callClosure(closure: ClosureObject, numArgs: number, span: Span) {
+	private callClosure(closure: ClosureObject, numArgs: number, span?: Span) {
 		if (closure.fn.numParams !== numArgs) {
 			return this.error(
 				`wrong number of arguments. wanted=${closure.fn.numParams}, got=${numArgs}`,
