@@ -43,6 +43,9 @@ async function runFiles() {
 					const compiler = new Compiler();
 					try {
 						compiler.compile(program);
+						const vm = new VM(compiler.bytecode());
+						vm.run();
+						console.log(vm.lastPoppedElement()?.inspect());
 					} catch (e) {
 						if (e instanceof ErrorObject) {
 							reportError(e, res);
@@ -52,9 +55,6 @@ async function runFiles() {
 					if (printOps) {
 						console.log(stringify(compiler.bytecode().instructions));
 					}
-					const vm = new VM(compiler.bytecode());
-					vm.run();
-					console.log(vm.lastPoppedElement()?.inspect());
 				} else {
 					const evaluated = evaluate(program, new Environment());
 					if (evaluated instanceof ErrorObject) {
