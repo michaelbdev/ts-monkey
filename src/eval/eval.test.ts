@@ -238,6 +238,16 @@ describe("eval", () => {
 				expectedParams: ["x", "y"],
 			},
 			{ input: "fn (x) => x", expectedBody: "x", expectedParams: ["x"] },
+			{
+				input: "fn (y=1) => y + 1",
+				expectedBody: "(y + 1)",
+				expectedParams: ["y"],
+			},
+			{
+				input: "fn (a,y=[1][1]) => a + y",
+				expectedBody: "(a + y)",
+				expectedParams: ["a", "y"],
+			},
 		];
 		for (const { input, expectedParams, expectedBody } of tests) {
 			const evaluated = testEval(input) as FunctionObject;
@@ -310,6 +320,47 @@ describe("eval", () => {
 		[input, input2, input3].forEach((input) => {
 			testIntegerObject(testEval(input) as IntegerObject, 15);
 		});
+	});
+
+	it("should evaluate called functions with default parameters", () => {
+		const tests = [
+			{ input: "let func = fn(x=1) { x; }; func();", expected: 1 },
+			{ input: "let func = fn(x=1) { x; }; func(5);", expected: 5 },
+			{ input: "let func = fn(a,b=10) { a+b }; func(5);", expected: 15 },
+			{
+				input: "let func = fn(x=1,y=2) { x+y; }; func();",
+				expected: 3,
+			},
+			{
+				input: "let func = fn(x=1,y=x) { x+y; }; func();",
+				expected: 2,
+			},
+			{
+				input: "let func = fn(x,y=x) { x+y; }; func(100);",
+				expected: 200,
+			},
+			{
+				input: "let func = fn(x=1,y=x) { x+y; }; func(100);",
+				expected: 200,
+			},
+			{
+				input: "let func = fn(x=1,y=[1,2,3,4][0]) { x+y; }; func();",
+				expected: 2,
+			},
+			{
+				input:
+					"let num = fn ()=> 200; let func = fn(x=1,y=num()) { x+y; }; func();",
+				expected: 201,
+			},
+			{
+				input: "let func = fn(x=1, y= if(true){250}else{1}) { x+y; }; func();",
+				expected: 251,
+			},
+		];
+		for (const { input, expected } of tests) {
+			const evaluated = testEval(input);
+			testIntegerObject(evaluated as IntegerObject, expected);
+		}
 	});
 	it("should evaluate string literals", () => {
 		const input = `"hello world"`;
