@@ -139,10 +139,13 @@ export class Parser {
 		if (this.peekTokenIs(TokenType.SEMICOLON)) {
 			this.nextToken();
 		}
-		statement.span = {
-			start: statement.token.span.start,
-			end: statement.value!.span!.end,
-		};
+
+		if (statement.value?.span) {
+			statement.span = {
+				start: statement.token.span.start,
+				end: statement.value!.span!.end,
+			};
+		}
 		return statement;
 	}
 	private parseReturnStatement() {
@@ -363,9 +366,15 @@ export class Parser {
 		this.nextToken();
 		// either the function is a normal function or there are multiple parameters, both of which can't be parsed as a concise arrow fn
 		if (!this.peekTokenIs(TokenType.ARROW)) {
-			this.errors.push(
-				"a functions parentheses may only be left out if the function is an arrow function and if there is only one parameter.",
-			);
+			if (this.peekTokenIs(TokenType.ASSIGN)) {
+				this.errors.push(
+					"default parameters cannot be used on concise arrow functions.",
+				);
+			} else {
+				this.errors.push(
+					"a functions parentheses may only be left out if the function is an arrow function and if there is only one parameter.",
+				);
+			}
 			return null;
 		}
 		expr.isArrow = true;
@@ -382,13 +391,23 @@ export class Parser {
 		}
 		this.nextToken();
 		const param = new Identifier(this.currToken, this.currToken.literal);
-		param.span = this.currToken.span;
 		parameters.push(param);
+		param.span = this.currToken.span;
+		if (this.peekTokenIs(TokenType.ASSIGN)) {
+			this.nextToken();
+			this.nextToken();
+			param.defaultValue = this.parseExpression(Precedences.LOWEST)!;
+		}
 		while (this.peekTokenIs(TokenType.COMMA)) {
 			this.nextToken();
 			this.nextToken();
 			const ident = new Identifier(this.currToken, this.currToken.literal);
 			ident.span = this.currToken.span;
+			if (this.peekTokenIs(TokenType.ASSIGN)) {
+				this.nextToken();
+				this.nextToken();
+				ident.defaultValue = this.parseExpression(Precedences.LOWEST)!;
+			}
 			parameters.push(ident);
 		}
 		if (!this.expectPeek(TokenType.RPAREN)) return null;

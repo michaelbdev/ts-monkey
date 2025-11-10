@@ -43,6 +43,7 @@ export class LetStatement implements Statement {
 
 export class Identifier implements Expression {
 	public span?: Span | undefined;
+	public defaultValue?: Expression;
 	constructor(
 		public token: Token,
 		public value: string,
