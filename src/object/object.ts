@@ -167,6 +167,7 @@ export class CompiledFunctionObject implements InternalObject {
 		public readonly instructions: Instructions,
 		public numLocals: number,
 		public numParams: number,
+		public hasDefault: boolean[] = [],
 	) {}
 	type(): ObjectType {
 		return ObjectType.COMPILED_FUNCTION_OBJ;

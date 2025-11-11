@@ -37,6 +37,7 @@ export enum OpCodes {
 	OpGetFree,
 	OpFor,
 	OpPopFrame,
+	OpArgCount,
 }
 type Definition = {
 	name: string;
@@ -205,6 +206,10 @@ export const definitionsMap: Record<OpCodes, Definition> = {
 	[OpCodes.OpRem]: {
 		name: OpCodes[OpCodes.OpRem],
 		char: "%",
+		operandWidths: [],
+	},
+	[OpCodes.OpArgCount]: {
+		name: OpCodes[OpCodes.OpArgCount],
 		operandWidths: [],
 	},
 };

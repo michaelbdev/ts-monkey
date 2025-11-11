@@ -34,7 +34,7 @@ export class VM {
 	) {
 		const mainFn = new CompiledFunctionObject(this.bytecode.instructions, 0, 0);
 		const mainClosure = new ClosureObject(mainFn, []);
-		const mainFrame = new Frame(mainClosure, 0);
+		const mainFrame = new Frame(mainClosure, 0, 0);
 		this.frames[0] = mainFrame;
 	}
 	private stack: Maybe<InternalObject>[] = [];
@@ -149,6 +149,11 @@ export class VM {
 					frame.ip += 1;
 					const currentClosure = frame.closure;
 					this.push(currentClosure.free[index]);
+					break;
+				}
+
+				case OpCodes.OpArgCount: {
+					this.push(new IntegerObject(this.currentFrame.argCount));
 					break;
 				}
 				case OpCodes.OpCall: {
@@ -285,13 +290,21 @@ export class VM {
 		);
 	}
 	private callClosure(closure: ClosureObject, numArgs: number, span?: Span) {
-		if (closure.fn.numParams !== numArgs) {
+		let defaultsUsed = 0;
+		for (let i = 0; i < closure.fn.numParams; i++) {
+			if (closure.fn.hasDefault[i] && i >= numArgs) {
+				defaultsUsed++;
+			}
+		}
+
+		if (closure.fn.numParams > numArgs + defaultsUsed) {
 			return this.error(
 				`wrong number of arguments. wanted=${closure.fn.numParams}, got=${numArgs}`,
 				span,
 			);
 		}
-		this.pushFrame(new Frame(closure, this.stackPointer - numArgs));
+
+		this.pushFrame(new Frame(closure, this.stackPointer - numArgs, numArgs));
 		this.stackPointer = this.currentFrame.basePointer + closure.fn.numLocals;
 	}
 	private callBuiltin(fn: BuiltInObject, numArgs: number, span: Span) {
