@@ -485,6 +485,58 @@ describe("parser", () => {
 			);
 		}
 	});
+
+	it("should parse function literals with default parameters", () => {
+		const tests = [
+			{
+				input: "fn (x,y=1) => x+y",
+				expectedBodyType: InfixExpression,
+			},
+			{
+				input: "fn (x=1,y) => x+y",
+				expectedBodyType: InfixExpression,
+			},
+			{ input: "fn (x=20,y=x)=> {x+y}", expectedBodyType: BlockStatement },
+			{
+				input: "fn (x=1) => x",
+				expectedBodyType: Identifier,
+			},
+
+			{ input: "fn (x=1, y=2) => x+y", expectedBodyType: InfixExpression },
+
+			{ input: "fn (x=1, y=x+1) => y", expectedBodyType: Identifier },
+
+			{ input: "fn (x=(1+2)*3) => x", expectedBodyType: Identifier },
+
+			{
+				input: "fn (cb=fn (a) => a+1) => cb(1)",
+				expectedBodyType: CallExpression,
+			},
+
+			{ input: "fn (x=1) => { x+1 }", expectedBodyType: BlockStatement },
+
+			{
+				input: "fn (a, b=1, c) => {a+ b + c}",
+				expectedBodyType: BlockStatement,
+			},
+
+			{ input: "fn (a=b, b=2) => a+b", expectedBodyType: InfixExpression },
+
+			{ input: "fn (a = fn(x=1)=>x) => a()", expectedBodyType: CallExpression },
+		];
+		for (const { input, expectedBodyType } of tests) {
+			const parser = new Parser(new Lexer(input));
+			const program = parser.parseProgram();
+			checkParserErrors(parser);
+
+			expect(program.statements).toHaveLength(1);
+			const statement = program.statements[0] as ExpressionStatement;
+			expect(statement).toBeInstanceOf(ExpressionStatement);
+			const expr = statement.expression as FunctionLiteral;
+			expect(expr).toBeInstanceOf(FunctionLiteral);
+			expect(expr.body).toBeInstanceOf(expectedBodyType);
+		}
+	});
 	it("should parse call expressions", () => {
 		const input = "add(1,2*3,4+5)";
 		const parser = new Parser(new Lexer(input));

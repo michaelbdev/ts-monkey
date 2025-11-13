@@ -5,6 +5,7 @@ export class Frame {
 	constructor(
 		public closure: ClosureObject,
 		public basePointer: number,
+		public argCount: number,
 	) {}
 	get instructions() {
 		return this.closure.fn.instructions;

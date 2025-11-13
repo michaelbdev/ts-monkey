@@ -251,7 +251,35 @@ export class Compiler {
 
 		if (node instanceof FunctionLiteral) {
 			this.enterScope();
-			node.parameters?.forEach((param) => this.symbolTable.define(param.value));
+
+			node.parameters?.forEach((param, index) => {
+				this.symbolTable.define(param.value);
+				if (param.defaultValue) {
+					this.emit(OpCodes.OpArgCount, param.span);
+					this.emit(
+						OpCodes.OpConstant,
+						param.span,
+						this.addConstant(new IntegerObject(index)),
+					);
+					this.emit(OpCodes.OpGreaterThan, param.span);
+
+					const jumpOverDefault = this.emit(
+						OpCodes.OpJumpNotTruthy,
+						param.span,
+						9999,
+					);
+					const skipDefault = this.emit(OpCodes.OpJump, param.span, 9999);
+
+					const defaultStart = this.currentInstructions.length;
+					this.changeOperand(jumpOverDefault, defaultStart);
+
+					this.compile(param.defaultValue);
+					this.emit(OpCodes.OpSetLocal, param.span, index);
+
+					const afterDefault = this.currentInstructions.length;
+					this.changeOperand(skipDefault, afterDefault);
+				}
+			});
 			this.compile(node.body);
 			// i.e an arrow function without a block statement body e.g let onePlusTen = fn ()=> 1+10
 			const isShortenedArrow =
@@ -270,11 +298,14 @@ export class Compiler {
 			const numLocals = this.symbolTable.numDefs;
 			const free = this.symbolTable.freeSymbols;
 			const instructions = this.leaveScope();
+
+			const hasDefault = node.parameters?.map((p) => !!p.defaultValue) || [];
 			free.forEach((sym) => this.loadSymbol(sym, node.span));
 			const fn = new CompiledFunctionObject(
 				instructions,
 				numLocals,
 				node.parameters!.length,
+				hasDefault,
 			);
 			const index = this.addConstant(fn);
 			this.emit(OpCodes.OpClosure, node.span, index, free.length);

@@ -450,6 +450,42 @@ describe("vm", () => {
 			]);
 		});
 	});
+	it("should work with default parameters", () => {
+		runVmTests([
+			{ input: "let func = fn(x=1) { x; }; func();", expected: 1 },
+			{ input: "let func = fn(x=1) { x; }; func(5);", expected: 5 },
+			{ input: "let func = fn(a,b=10) { a+b }; func(5);", expected: 15 },
+			{
+				input: "let func = fn(x=1,y=2) { x+y; }; func();",
+				expected: 3,
+			},
+			{
+				input: "let func = fn(x=1,y=x) { x+y; }; func();",
+				expected: 2,
+			},
+			{
+				input: "let func = fn(x,y=x) { x+y; }; func(100);",
+				expected: 200,
+			},
+			{
+				input: "let func = fn(x=1,y=x) { x+y; }; func(100);",
+				expected: 200,
+			},
+			{
+				input: "let func = fn(x=1,y=[1,2,3,4][0]) { x+y; }; func();",
+				expected: 2,
+			},
+			{
+				input:
+					"let num = fn ()=> 200; let func = fn(x=1,y=num()) { x+y; }; func();",
+				expected: 201,
+			},
+			{
+				input: "let func = fn(x=1, y= if(true){250}else{1}) { x+y; }; func();",
+				expected: 251,
+			},
+		]);
+	});
 	it("should return error if a non function tries to be called", () => {
 		runVmTests([
 			{

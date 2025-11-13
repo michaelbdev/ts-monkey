@@ -381,6 +381,9 @@ export const applyFunction = (
 ) => {
 	if (func instanceof FunctionObject) {
 		const extendedEnv = extendFunctionEnv(func, args);
+		if (extendedEnv instanceof ErrorObject) {
+			return extendedEnv;
+		}
 		const evaluated = evaluate(func.body, extendedEnv);
 		return unwrapReturnValue(evaluated);
 	}
@@ -395,9 +398,25 @@ const extendFunctionEnv = (
 	func: FunctionObject,
 	args: Maybe<InternalObject>[],
 ) => {
+	let defaultParamCount = 0;
+	for (const [i, param] of func.params.entries()) {
+		if (param.defaultValue && !args[i]) {
+			defaultParamCount++;
+		}
+	}
+	if (func.params.length > args.length + defaultParamCount) {
+		return new ErrorObject(
+			`wrong number of arguments, wanted=${func.params.length}, got=${args.length} ${defaultParamCount ? `(${args.length + defaultParamCount} with default parameters)` : ""}`,
+		);
+	}
 	const env = Environment.newEnclosedEnvironment(func.env);
 	func.params.forEach((param, i) => {
-		env.set(param.value, args[i]);
+		if (param.defaultValue && !args[i]) {
+			const val = evaluate(param.defaultValue, env);
+			env.set(param.value, val);
+		} else {
+			env.set(param.value, args[i]);
+		}
 	});
 	return env;
 };
