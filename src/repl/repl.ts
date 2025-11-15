@@ -52,29 +52,18 @@ export async function repl() {
 			const compiler = new Compiler(constants, symbolTable);
 			try {
 				compiler.compile(program);
+				const vm = new VM(compiler.bytecode(), globals);
+				vm.run();
+				console.log(vm.lastPoppedElement()?.inspect());
 			} catch (e) {
 				if (e instanceof ErrorObject) {
 					reportError(e, line);
 				}
 				continue;
-			}
-			const vm = new VM(compiler.bytecode(), globals);
-			try {
-				vm.run();
-			} catch (e) {
-				if (e instanceof ErrorObject) {
-					reportError(e, line);
-					continue;
-				}
 			}
 			if (values.bytecode) {
 				console.log(stringify(compiler.bytecode().instructions));
 			}
-			if (vm.lastPoppedElement() instanceof ErrorObject) {
-				reportError(vm.lastPoppedElement() as ErrorObject, line);
-				continue;
-			}
-			console.log(vm.lastPoppedElement()?.inspect());
 		} else {
 			const evaluated = evaluate(program, env);
 			if (evaluated instanceof ErrorObject) {
