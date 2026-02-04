@@ -37,7 +37,7 @@ puts(item+index)}```
 Clone the project
 
 ```bash
-  git clone https://github.com/MichaelB-99/ts-monkey
+  git clone https://github.com/michaelbdev/ts-monkey
 ```
 
 Go to the project directory
