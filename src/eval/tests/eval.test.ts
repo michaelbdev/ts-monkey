@@ -493,6 +493,10 @@ describe("eval", () => {
 			{ input: 'find(["a","ab","abc"],fn(x)=>len(x)>2)', expected: "abc" },
 			{ input: 'find(["a","ab","abc"],fn x => len(x)>2)', expected: "abc" },
 			{
+				input: 'let obj = {}; set(obj,"hello", "world"); obj["hello"]',
+				expected: "world",
+			},
+			{
 				input: 'reduce(["hello ", "world"],fn(acc,curr){acc+curr})',
 				expected: "hello world",
 			},
