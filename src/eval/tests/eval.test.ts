@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Lexer } from "../lexer/lexer";
+import { Lexer } from "../../lexer/lexer";
 import {
 	ArrayObject,
 	BooleanObject,
@@ -12,10 +12,10 @@ import {
 	type NullObject,
 	ObjectType,
 	StringObject,
-} from "../object/object";
-import { Parser } from "../parser/parser";
-import { Environment } from "./environment";
-import { evaluate } from "./eval";
+} from "../../object/object";
+import { Parser } from "../../parser/parser";
+import { Environment } from "../environment";
+import { evaluate } from "../eval";
 describe("eval", () => {
 	it("should evaluate integer expressions", () => {
 		const tests = [

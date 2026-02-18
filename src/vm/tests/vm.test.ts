@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { Compiler } from "../compiler/compiler";
-import { Lexer } from "../lexer/lexer";
+import { Compiler } from "../../compiler/compiler";
+import { Lexer } from "../../lexer/lexer";
 import {
 	type ArrayObject,
 	BooleanObject,
@@ -10,9 +10,9 @@ import {
 	type InternalObject,
 	NULL_OBJ,
 	type StringObject,
-} from "../object/object";
-import { Parser } from "../parser/parser";
-import { VM } from "./vm";
+} from "../../object/object";
+import { Parser } from "../../parser/parser";
+import { VM } from "../vm";
 const testIntegerObject = (obj: InternalObject, expected: number) => {
 	expect(obj).toBeInstanceOf(IntegerObject);
 	expect((obj as IntegerObject).value).toBe(expected);

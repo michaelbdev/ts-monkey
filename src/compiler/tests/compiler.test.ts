@@ -1,17 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import { type Instructions, OpCodes, make, stringify } from "../code/code";
-import { Lexer } from "../lexer/lexer";
+import { type Instructions, OpCodes, make, stringify } from "../../code/code";
+import { Lexer } from "../../lexer/lexer";
 import {
 	CompiledFunctionObject,
 	ErrorObject,
 	IntegerObject,
 	type InternalObject,
 	StringObject,
-} from "../object/object";
-import { Parser } from "../parser/parser";
-import { flattenTypedArrays } from "../utils/flatten-typed-arrays";
-import type { Maybe } from "../utils/types";
-import { Compiler } from "./compiler";
+} from "../../object/object";
+import { Parser } from "../../parser/parser";
+import { flattenTypedArrays } from "../../utils/flatten-typed-arrays";
+import type { Maybe } from "../../utils/types";
+import { Compiler } from "../compiler";
 describe("compiler", () => {
 	it("should compile integer arithmetic", () => {
 		const tests = [
