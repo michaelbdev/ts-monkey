@@ -294,7 +294,7 @@ export const builtins: Record<string, BuiltInObject> = {
 		return new ArrayObject(filtered);
 	}),
 	puts: new BuiltInObject(({ args }) => {
-		args.forEach((arg) => console.log(arg?.inspect()));
+		console.log(args.map((arg) => arg?.inspect()).join(" "));
 		return NULL_OBJ;
 	}),
 };

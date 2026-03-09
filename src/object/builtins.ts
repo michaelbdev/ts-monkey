@@ -46,7 +46,7 @@ export const builtins: { name: string; builtin: BuiltInObject }[] = [
 	{
 		name: "puts",
 		builtin: new BuiltInObject(({ args }) => {
-			args.forEach((arg) => console.log(arg?.inspect()));
+			console.log(args.map((arg) => arg?.inspect()).join(" "));
 			return NULL_OBJ;
 		}),
 	},
