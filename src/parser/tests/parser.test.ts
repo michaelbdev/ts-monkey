@@ -756,6 +756,13 @@ describe("parser", () => {
 			expect(statement.body).toBeInstanceOf(BlockStatement);
 		}
 	});
+	it("should parse a program that is just a single line comment",()=>{
+		const input = `// a comment`;
+		const parser = new Parser(new Lexer(input));
+		const program = parser.parseProgram();
+		checkParserErrors(parser);
+		expect(program.statements).toHaveLength(0);
+	})
 
 	describe("spans", () => {
 		it("should set span correctly for let statements", () => {

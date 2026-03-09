@@ -393,7 +393,7 @@ export class Lexer {
 		}
 	}
 	private skipSingleLineComment() {
-		while (this.ch !== "\n") {
+		while (this.ch !== "\n" && this.ch !==0) {
 			this.readChar();
 		}
 	}
