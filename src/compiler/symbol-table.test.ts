@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { SymbolScope, SymbolTable, type SymbolType } from "./symbol-table";
+
 describe("define", () => {
 	it("should create and return the symbol", () => {
 		const expected: Record<string, SymbolType> = {
@@ -148,12 +149,13 @@ describe("resolve", () => {
 			{ name: "b", scope: SymbolScope.BuiltinScope, index: 1 },
 			{ name: "c", scope: SymbolScope.BuiltinScope, index: 2 },
 		];
-		expected.forEach((sym, i) => global.defineBuiltin(i, sym.name));
-		[global, firstLocal, secondLocal].forEach((table) =>
-			expected.forEach((sym, i) => {
-				const res = table.resolve(sym.name);
-				expect(res).toEqual(sym);
-			}),
+		expected.forEach((sym, i) => void global.defineBuiltin(i, sym.name));
+		[global, firstLocal, secondLocal].forEach(
+			(table) =>
+				void expected.forEach((sym) => {
+					const res = table.resolve(sym.name);
+					expect(res).toEqual(sym);
+				}),
 		);
 	});
 	it("should resolve free variables", () => {

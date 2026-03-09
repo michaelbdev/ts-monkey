@@ -16,6 +16,7 @@ import {
 import { Parser } from "../../parser/parser";
 import { Environment } from "../environment";
 import { evaluate } from "../eval";
+
 describe("eval", () => {
 	it("should evaluate integer expressions", () => {
 		const tests = [
@@ -254,8 +255,8 @@ describe("eval", () => {
 			const params = evaluated.params;
 			expect(evaluated).toBeInstanceOf(FunctionObject);
 			expect(params).toHaveLength(expectedParams.length);
-			params.forEach((param, i) =>
-				expect(param.string()).toBe(expectedParams[i]),
+			params.forEach(
+				(param, i) => void expect(param.string()).toBe(expectedParams[i]),
 			);
 			expect(evaluated.body.string()).toBe(expectedBody);
 		}
@@ -569,7 +570,7 @@ describe("eval", () => {
 								? a.inspect() === "true"
 								: a?.inspect(),
 					);
-					expected.forEach((el) => expect(values).toContain(el));
+					expected.forEach((el) => void expect(values).toContain(el));
 					break;
 				}
 				default:

@@ -19,7 +19,7 @@ import {
 	ReturnStatement,
 	StringLiteral,
 } from "../ast/ast";
-import { type Instructions, OpCodes, make } from "../code/code";
+import { type Instructions, make, OpCodes } from "../code/code";
 import { builtins } from "../object/builtins";
 import {
 	CompiledFunctionObject,
@@ -46,7 +46,7 @@ export class Compiler {
 		private constants: Maybe<InternalObject>[] = [],
 		public symbolTable: SymbolTable = new SymbolTable(),
 	) {
-		builtins.forEach((b, i) => symbolTable.defineBuiltin(i, b.name));
+		builtins.forEach((b, i) => void symbolTable.defineBuiltin(i, b.name));
 	}
 
 	compile(node: Maybe<Node>) {
@@ -198,11 +198,11 @@ export class Compiler {
 			}
 			let symbol: SymbolType;
 			if (node.value instanceof FunctionLiteral) {
-				symbol = this.symbolTable.define(node.name?.value!);
+				symbol = this.symbolTable.define(node.name!.value);
 				this.compile(node.value);
 			} else {
 				this.compile(node.value);
-				symbol = this.symbolTable.define(node.name?.value!);
+				symbol = this.symbolTable.define(node.name!.value);
 			}
 			if (symbol.scope === SymbolScope.GlobalScope) {
 				this.emit(OpCodes.OpSetGlobal, node.span, symbol.index);
@@ -219,8 +219,8 @@ export class Compiler {
 		}
 
 		if (node instanceof ArrayLiteral) {
-			node.elements?.forEach((el) => this.compile(el));
-			this.emit(OpCodes.OpArray, node.span, node.elements?.length!);
+			node.elements?.forEach((el) => void this.compile(el));
+			this.emit(OpCodes.OpArray, node.span, node.elements!.length);
 		}
 
 		if (node instanceof HashLiteral) {
@@ -300,7 +300,7 @@ export class Compiler {
 			const instructions = this.leaveScope();
 
 			const hasDefault = node.parameters?.map((p) => !!p.defaultValue) || [];
-			free.forEach((sym) => this.loadSymbol(sym, node.span));
+			free.forEach((sym) => void this.loadSymbol(sym, node.span));
 			const fn = new CompiledFunctionObject(
 				instructions,
 				numLocals,
@@ -312,7 +312,7 @@ export class Compiler {
 		}
 		if (node instanceof CallExpression) {
 			this.compile(node.func);
-			node.args?.forEach((arg) => this.compile(arg));
+			node.args?.forEach((arg) => void this.compile(arg));
 			const argSpans = node.args?.map((a) => a.span!) || [];
 			const span: Span = { ...node.span!, fnSpan: node!.func!.span, argSpans };
 			this.emit(OpCodes.OpCall, span, node.args!.length);
@@ -333,7 +333,7 @@ export class Compiler {
 			const numDefs = this.symbolTable.numDefs;
 
 			const instructions = this.leaveScope();
-			free.forEach((sym) => this.loadSymbol(sym, node.span));
+			free.forEach((sym) => void this.loadSymbol(sym, node.span));
 
 			const fn = new CompiledFunctionObject(
 				instructions,
@@ -341,7 +341,7 @@ export class Compiler {
 				node.currIndex ? 2 : 1,
 			);
 
-			const argSpans = [node.iterable?.span!];
+			const argSpans = [node.iterable!.span!];
 			const index = this.addConstant(fn);
 			this.emit(
 				OpCodes.OpFor,

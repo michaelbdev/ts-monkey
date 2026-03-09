@@ -301,9 +301,9 @@ describe("lexer", () => {
 			expect(token.literal).toBe(test.expectedLiteral);
 		}
 	});
-	it("should lex a program that is just a single line comment",()=>{
+	it("should lex a program that is just a single line comment", () => {
 		const input = `// a comment`;
 		const lexer = new Lexer(input);
-		expect(lexer.nextToken().type).toBe(TokenType.EOF)
-	})
+		expect(lexer.nextToken().type).toBe(TokenType.EOF);
+	});
 });

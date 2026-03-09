@@ -389,7 +389,7 @@ export const applyFunction = (
 	}
 	if (func instanceof BuiltInObject) {
 		const argSpans = node?.args?.map((arg) => arg.span) || [];
-		return func.fn({ env: "interpreter", args, span: node?.span!, argSpans });
+		return func.fn({ env: "interpreter", args, span: node!.span!, argSpans });
 	}
 	return new ErrorObject(`not a function: ${func?.type()}`, node?.func?.span);
 };
@@ -556,7 +556,7 @@ const evalForStatement = (node: ForStatement, env: Environment) => {
 
 	for (const [i, el] of iter.elements.entries()) {
 		const newEnv = Environment.newEnclosedEnvironment(env);
-		newEnv.set(node.currItem?.value!, el);
+		newEnv.set(node.currItem!.value, el);
 		if (node.currIndex) {
 			newEnv.set(node.currIndex.value, new IntegerObject(i));
 		}

@@ -1,7 +1,7 @@
 import {
+	definitionsMap,
 	type Instructions,
 	OpCodes,
-	definitionsMap,
 	readUint8,
 	readUint16,
 } from "../code/code";

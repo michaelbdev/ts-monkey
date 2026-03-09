@@ -1,4 +1,4 @@
-import { type Instructions, OpCodes, make } from "../code/code";
+import { type Instructions, make, OpCodes } from "../code/code";
 import { Bytecode } from "../compiler/compiler";
 import type { Span } from "../token/token";
 import type { Maybe } from "../utils/types";

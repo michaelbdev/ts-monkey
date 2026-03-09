@@ -33,7 +33,7 @@ describe("parser", () => {
 				expectedValue: "y",
 			},
 		];
-		tests.forEach(({ input, expectedIdentifier, expectedValue }, i) => {
+		tests.forEach(({ input, expectedIdentifier, expectedValue }) => {
 			const parser = new Parser(new Lexer(input));
 			const program = parser.parseProgram();
 			checkParserErrors(parser);
@@ -53,7 +53,7 @@ describe("parser", () => {
 				expected: "let y = map(list, fn(x){x});",
 			},
 		];
-		tests.forEach(({ input, expected }, i) => {
+		tests.forEach(({ input, expected }) => {
 			const parser = new Parser(new Lexer(input));
 			const program = parser.parseProgram();
 			checkParserErrors(parser);
@@ -756,13 +756,13 @@ describe("parser", () => {
 			expect(statement.body).toBeInstanceOf(BlockStatement);
 		}
 	});
-	it("should parse a program that is just a single line comment",()=>{
+	it("should parse a program that is just a single line comment", () => {
 		const input = `// a comment`;
 		const parser = new Parser(new Lexer(input));
 		const program = parser.parseProgram();
 		checkParserErrors(parser);
 		expect(program.statements).toHaveLength(0);
-	})
+	});
 
 	describe("spans", () => {
 		it("should set span correctly for let statements", () => {
@@ -959,7 +959,7 @@ function checkParserErrors(parser: Parser) {
 		return;
 	}
 	console.error(`parser has ${parser.errors.length} errors`);
-	parser.errors.forEach((e) => console.error("parser error", e));
+	parser.errors.forEach((e) => void console.error("parser error", e));
 	throw new Error("");
 }
 

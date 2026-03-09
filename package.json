@@ -9,7 +9,7 @@
 		"benchmark": "bun benchmark.ts"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.8.0",
+		"@biomejs/biome": "2.4.6",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {

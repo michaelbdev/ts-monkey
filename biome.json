@@ -1,8 +1,6 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.8.0/schema.json",
-	"organizeImports": {
-		"enabled": true
-	},
+	"$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"formatter": {
 		"enabled": true
 	},
@@ -24,7 +22,8 @@
 				"noUnusedImports": {
 					"fix": "safe",
 					"level": "warn"
-				}
+				},
+				"useParseIntRadix": "off"
 			},
 			"recommended": true
 		}

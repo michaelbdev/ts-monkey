@@ -13,6 +13,7 @@ import {
 } from "../../object/object";
 import { Parser } from "../../parser/parser";
 import { VM } from "../vm";
+
 const testIntegerObject = (obj: InternalObject, expected: number) => {
 	expect(obj).toBeInstanceOf(IntegerObject);
 	expect((obj as IntegerObject).value).toBe(expected);

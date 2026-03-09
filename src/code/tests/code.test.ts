@@ -2,12 +2,13 @@ import { describe, expect, it } from "bun:test";
 import { flattenTypedArrays } from "../../utils/flatten-typed-arrays";
 import {
 	type Instructions,
-	OpCodes,
 	lookupOpCode,
 	make,
+	OpCodes,
 	readOperands,
 	stringify,
 } from "../code";
+
 describe("make", () => {
 	it("should return a typed array with the opcode and the encoding of the operands ", () => {
 		const tests: { op: OpCodes; operands: number[]; expected: number[] }[] = [

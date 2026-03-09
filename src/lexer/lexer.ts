@@ -1,4 +1,4 @@
-import { type Token, TokenType, lookupIdentifier } from "../token/token";
+import { lookupIdentifier, type Token, TokenType } from "../token/token";
 
 type Char = string | 0;
 export class Lexer {
@@ -393,7 +393,7 @@ export class Lexer {
 		}
 	}
 	private skipSingleLineComment() {
-		while (this.ch !== "\n" && this.ch !==0) {
+		while (this.ch !== "\n" && this.ch !== 0) {
 			this.readChar();
 		}
 	}
